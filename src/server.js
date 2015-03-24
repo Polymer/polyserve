@@ -10,10 +10,11 @@
 
 var express = require('express');
 var fs = require('fs');
-var http = require('http');
+var http = require('http2');
 var path = require('path');
 var parseUrl = require('url').parse;
 var send = require('send');
+var resolve = require('resolve');
 
 /**
  * Make a polyserve express app.
@@ -66,8 +67,19 @@ function startServer(port, componentDir, packageName) {
   console.log('Files in this directory are available at localhost:' +
       port + '/components/' + app.polyservePackageName + '/...');
 
-  var server = http.createServer(app);
-  server = app.listen(port);
+  resolve('http2', {basedir: __dirname}, function(error, http2path) {
+    console.log(fs.readFileSync(path.join(http2path, '../../example/localhost.key')));
+    var log = require('http2/test/util').createLogger('server');
+    var options = {
+      log: log,
+      key: fs.readFileSync(path.join(http2path, '../../example/localhost.key')),
+      cert: fs.readFileSync(path.join(http2path, '../../example/localhost.crt')),
+    };
+
+    var server = http.createServer(options, app);
+    // var server = http.createServer(app);
+    server = app.listen(port);
+  });
 }
 
 module.exports = {
