@@ -61,23 +61,22 @@ function startServer(port, componentDir, packageName) {
   console.log('Starting Polyserve on port ' + port);
 
   var app = express();
-
-  app.use('/components/', makeApp(componentDir, packageName));
+  var polyserve = makeApp(componentDir, packageName);
+  app.use('/components/', polyserve);
 
   console.log('Files in this directory are available at localhost:' +
-      port + '/components/' + app.polyservePackageName + '/...');
+      port + '/components/' + polyserve.polyservePackageName + '/...');
 
-  resolve('http2', {basedir: __dirname}, function(error, http2path) {
-    console.log(fs.readFileSync(path.join(http2path, '../../example/localhost.key')));
-    var log = require('http2/test/util').createLogger('server');
-    var options = {
-      log: log,
-      key: fs.readFileSync(path.join(http2path, '../../example/localhost.key')),
-      cert: fs.readFileSync(path.join(http2path, '../../example/localhost.crt')),
-    };
-    var server = http.createServer(options, app);
-    server.listen(port);
-  });
+  var log = require('http2/test/util').createLogger('server');
+  var options = {
+    log: log,
+    key: fs.readFileSync(path.join(__dirname, '../ssl/server.key'), {encoding: 'utf8'}),
+    cert: fs.readFileSync(path.join(__dirname, '../ssl/server.crt'), {encoding: 'utf8'}),
+    // secureProtocol: 'TLSv1_server_method',
+    secureOptions: ['SSL_OP_NO_SSLv2'],
+  };
+  var server = http.createServer(options, app);
+  server.listen(port);
 }
 
 module.exports = {
