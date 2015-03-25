@@ -75,10 +75,8 @@ function startServer(port, componentDir, packageName) {
       key: fs.readFileSync(path.join(http2path, '../../example/localhost.key')),
       cert: fs.readFileSync(path.join(http2path, '../../example/localhost.crt')),
     };
-
     var server = http.createServer(options, app);
-    // var server = http.createServer(app);
-    server = app.listen(port);
+    server.listen(port);
   });
 }
 
