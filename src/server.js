@@ -10,10 +10,11 @@
 
 var express = require('express');
 var fs = require('fs');
-var http = require('http');
+var http = require('http2');
 var path = require('path');
 var parseUrl = require('url').parse;
 var send = require('send');
+var resolve = require('resolve');
 
 /**
  * Make a polyserve express app.
@@ -60,14 +61,22 @@ function startServer(port, componentDir, packageName) {
   console.log('Starting Polyserve on port ' + port);
 
   var app = express();
-
-  app.use('/components/', makeApp(componentDir, packageName));
+  var polyserve = makeApp(componentDir, packageName);
+  app.use('/components/', polyserve);
 
   console.log('Files in this directory are available at localhost:' +
-      port + '/components/' + app.polyservePackageName + '/...');
+      port + '/components/' + polyserve.polyservePackageName + '/...');
 
-  var server = http.createServer(app);
-  server = app.listen(port);
+  var log = require('http2/test/util').createLogger('server');
+  var options = {
+    log: log,
+    key: fs.readFileSync(path.join(__dirname, '../ssl/server.key'), {encoding: 'utf8'}),
+    cert: fs.readFileSync(path.join(__dirname, '../ssl/server.crt'), {encoding: 'utf8'}),
+    // secureProtocol: 'TLSv1_server_method',
+    secureOptions: ['SSL_OP_NO_SSLv2'],
+  };
+  var server = http.createServer(options, app);
+  server.listen(port);
 }
 
 module.exports = {
