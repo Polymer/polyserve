@@ -27,12 +27,6 @@ var send = require('send');
 function makeApp(componentDir, packageName, headers) {
   componentDir = componentDir || 'bower_components';
 
-  if (packageName == null) {
-    var bowerFile = fs.readFileSync('bower.json');
-    var bowerJson = JSON.parse(bowerFile);
-    packageName = bowerJson.name;
-  }
-
   console.log('Serving components from ' + componentDir);
 
   var app = express();
@@ -61,10 +55,16 @@ function startServer(port, componentDir, packageName) {
 
   var app = express();
 
+  if (packageName == null) {
+    var bowerFile = fs.readFileSync('bower.json');
+    var bowerJson = JSON.parse(bowerFile);
+    packageName = bowerJson.name;
+  }
+  
   app.use('/components/', makeApp(componentDir, packageName));
 
   console.log('Files in this directory are available at localhost:' +
-      port + '/components/' + app.polyservePackageName + '/...');
+      port + '/components/' + packageName + '/...');
 
   var server = http.createServer(app);
   server = app.listen(port);
