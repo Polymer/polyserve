@@ -13,7 +13,7 @@ var fs = require('fs');
 var path = require('path');
 var parseUrl = require('url').parse;
 var send = require('send');
-var bowerConfig = require('./bower_config');
+var bowerConfig = require('./bower').config;
 
 /**
  * Make a polyserve express app.

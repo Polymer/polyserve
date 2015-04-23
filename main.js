@@ -9,6 +9,7 @@
  */
 
 module.exports = {
+  bowerInstall: require('./src/bower').install,
   startServer: require('./src/start_server'),
   makeApp: require('./src/make_app')
 };

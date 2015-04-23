@@ -10,6 +10,7 @@
 
 var path = require('path');
 var fs = require('fs');
+var spawn = require('child_process').spawn;
 
 function bowerConfigPath() {
   return path.resolve(process.cwd(), 'bower.json');
@@ -28,7 +29,7 @@ function bowerConfigContents() {
   return contents || '{}';
 }
 
-function bowerConfig() {
+function config() {
   try {
     return JSON.parse(bowerConfigContents());
   } catch (e) {
@@ -39,4 +40,12 @@ function bowerConfig() {
   return {};
 }
 
-module.exports = bowerConfig;
+function install(cb) {
+  var proc = spawn('bower', ['install'], {stdio: 'inherit'});
+  proc.on('close', cb);
+}
+
+module.exports = {
+  config: config,
+  install: install
+};
