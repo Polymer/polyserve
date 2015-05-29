@@ -11,10 +11,13 @@
 
 var resolve = require('resolve');
 var argv = require('minimist')(process.argv);
+var BowerConfig = require('bower-config');
 
 process.title = 'polyserve';
 
 resolve('polyserve', {basedir: process.cwd()}, function(error, path) {
   var polyserve = path ? require(path) : require('..');
-  polyserve.startServer(argv.p, argv.o);
+  var componentDir = argv.c || new BowerConfig().load()._config.directory;
+
+  polyserve.startServer(argv.p, argv.o, componentDir);
 });
