@@ -51,7 +51,17 @@ function makeApp(componentDir, packageName, headers, root) {
         res.append(header, headers[header]);
       }
     }
-    send(req, filePath).pipe(res);
+    // fallback to serving from up a directory for co-development of seed elements.
+    fs.exists(filePath, function(exists) {                                                                                                                                         
+      if (exists) {                                                                                                                                                                
+        send(req, filePath).pipe(res);                                                                                                                                             
+        return;                                                                                                                                                                    
+      }                                                                                                                                                                            
+      splitPath = url.pathname.split('/').slice(1);                                                                                                                                
+      splitPath = ['..'].concat(splitPath);                                                                                                                                        
+      filePath = splitPath.join('/');                                                                                                                                              
+      fs.createReadStream(filePath).pipe(res);                                                                                                                                     
+    }); 
   });
   app.packageName = packageName;
   return app;
