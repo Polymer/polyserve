@@ -69,6 +69,10 @@ function startWithPort(options) {
       opn(url, options.browser);
     }
   }
+  
+  if (options.callback) {
+	options.callback(app, server);
+  }
 }
 
 module.exports = startServer;
