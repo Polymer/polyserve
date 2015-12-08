@@ -64,6 +64,7 @@ export async function run(): Promise<StartServerResult> {
     certPath: cliOptions['cert'],
     pushManifestPath: cliOptions['manifest'],
     proxy: proxyArgs.path && proxyArgs.target && proxyArgs,
+    allowOrigin: cliOptions['allow-origin'],
   };
 
   if (cliOptions.help) {
