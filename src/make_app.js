@@ -38,7 +38,7 @@ function makeApp(options) {
   let app = express();
 
   app.get('/', function (req, res) {
-    res.redirect(301, `./${packageName}/`);
+    res.redirect(`./${packageName}/`);
   });
 
   app.get('*', function (req, res) {
