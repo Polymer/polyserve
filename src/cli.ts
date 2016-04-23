@@ -21,7 +21,16 @@ export function run(): Promise<void> {
       type: Boolean,
     });
     var cli = commandLineArgs(argsWithHelp);
-    var cliOptions = cli.parse();
+
+    try {
+      var cliOptions = cli.parse();
+    }
+    catch (e) {
+      printUsage(cli);
+      reject();
+      return;
+    }
+
     var options: ServerOptions = {
       port: cliOptions.port,
       hostname: cliOptions.hostname,
@@ -32,14 +41,19 @@ export function run(): Promise<void> {
     }
 
     if (cliOptions.help) {
-      var usage = cli.getUsage({
-        header: 'A development server for Polymer projects',
-        title: 'polyserve',
-      });
-      console.log(usage);
+      printUsage(cli);
+      reject();
       resolve();
     } else {
       return startServer(options);
     }
   });
+}
+
+function printUsage(cli: any): void {
+  var usage = cli.getUsage({
+    header: 'A development server for Polymer projects',
+    title: 'polyserve',
+  });
+  console.log(usage);
 }
