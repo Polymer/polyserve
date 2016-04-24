@@ -14,6 +14,7 @@ import * as express from 'express';
 import * as findPort from 'find-port';
 import * as http from 'http';
 import * as opn from 'opn';
+import * as Promise from 'promise';
 import { makeApp } from './make_app';
 
 export interface ServerOptions {
