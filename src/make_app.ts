@@ -49,7 +49,7 @@ export function makeApp(options: AppOptions): PolyserveApplication {
   app.get('*', function (req, res) {
     // Serve local files from . and other components from bower_components
     let url = parseUrl(req.url, true);
-    const pathPieces = url.pathname.split('/');
+    let pathPieces = url.pathname.split('/');
     // Don't serve out any dot files.
     if (pathPieces.some((piece) => piece.startsWith('.'))) {
       res.status(404);
