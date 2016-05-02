@@ -80,6 +80,26 @@ ERROR: Port in use: ${port}
 Please choose another port, or let an unused port be chosen automatically.
 `;
 
+/**
+ * Like startServer(), but takes CLI "hyphen-seperated" formatted arguments and
+ * parses them into the desired "lowerCamelCase" formatted ServerOption properties.
+ */
+export function startServerWithCliArgs(options: any): Promise<http.Server> {
+  var parsedOptions: ServerOptions = {
+    root: options.root,
+    port: options.port,
+    hostname: options.hostname,
+    open: options.open,
+    openBrowser: options['open-browser'],
+    openPath: options['open-path'],
+    componentDir: options['component-dir'],
+    packageName: options['package-name'],
+  }
+
+  console.log(startServer);
+  return exports.startServer(parsedOptions);
+}
+
 export function getApp(options: ServerOptions) {
   let port = options.port;
   let hostname = options.hostname;
