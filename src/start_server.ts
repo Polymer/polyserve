@@ -53,6 +53,7 @@ function applyDefaultOptions(options: ServerOptions): ServerOptions {
     port: options.port || 8080,
     hostname: options.hostname || "localhost",
     root: path.resolve(options.root || '.'),
+    openPath: options.openPath || "index.html",
   });
   return withDefaults;
 }
