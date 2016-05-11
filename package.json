@@ -30,6 +30,7 @@
     "chai": "^3.5.0",
     "gulp": "^3.9.1",
     "gulp-mocha": "^2.2.0",
+    "sinon": "^1.17.4",
     "supertest": "^1.2.0",
     "typescript": "^1.8.10",
     "typings": "^0.8.1"

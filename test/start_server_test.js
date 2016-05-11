@@ -10,61 +10,96 @@
 
 'use strict';
 
-const getApp = require('../lib/start_server').getApp;
+const startServerModule = require('../lib/start_server');
 const assert = require('chai').assert;
+const sinon = require('sinon');
 const cliRun = require('../lib/cli').run;
 const supertest = require('supertest');
 
-suite('startServer', () => {
+suite('lib/start_server', () => {
+  suite('getApp', () => {
 
-  test('returns an app', () => {
-    let app = getApp({});
-    assert.isOk(app);
-  });
-
-  test('serves root application files', (done) => {
-    let app = getApp({
-      root: __dirname,
+    test('returns an app', () => {
+      let app = startServerModule.getApp({});
+      assert.isOk(app);
     });
-    supertest(app)
-      .get('/test-file.txt')
-      .expect(200, 'PASS\n')
-      .end(done);
-  });
 
-  test('serves component files', (done) => {
-    let app = getApp({
-      root: __dirname,
+    test('serves root application files', (done) => {
+      let app = startServerModule.getApp({
+        root: __dirname,
+      });
+      supertest(app)
+        .get('/test-file.txt')
+        .expect(200, 'PASS\n')
+        .end(done);
     });
-    supertest(app)
-      .get('/bower_components/test-component/test-file.txt')
-      .expect(200, 'TEST COMPONENT\n')
-      .end(done);
-  });
 
-  test('serves index.html, not 404', (done) => {
-    let app = getApp({
-      root: __dirname,
+    test('serves component files', (done) => {
+      let app = startServerModule.getApp({
+        root: __dirname,
+      });
+      supertest(app)
+        .get('/bower_components/test-component/test-file.txt')
+        .expect(200, 'TEST COMPONENT\n')
+        .end(done);
     });
-    supertest(app)
-      .get('/foo')
-      .expect(200, 'INDEX\n')
-      .end(done);
-  });
 
-  test('unknown cmd parameter should not throw exception', (done) => {
-    var argv = process.argv;
-
-    process.argv = ["node", "polyserve", "--unknown-parameter"];
-    var result = cliRun();
-
-    result.then(function() {
-      process.argv = argv;
-      done();
-    }, function(err) {
-      process.argv = argv;
-      done(err);
+    test('serves index.html, not 404', (done) => {
+      let app = startServerModule.getApp({
+        root: __dirname,
+      });
+      supertest(app)
+        .get('/foo')
+        .expect(200, 'INDEX\n')
+        .end(done);
     });
+
+    test('unknown cmd parameter should not throw exception', (done) => {
+      var argv = process.argv;
+
+      process.argv = ["node", "polyserve", "--unknown-parameter"];
+      var result = cliRun();
+
+      result.then(function() {
+        process.argv = argv;
+        done();
+      }, function(err) {
+        process.argv = argv;
+        done(err);
+      });
+    });
+
   });
 
+  suite('startServerWithCliArgs', () => {
+
+    test('calls startServer() with properly formatted & translated ServerOptions', () => {
+      let userOptions = {
+        root: 'ROOT',
+        port: 1234,
+        hostname: 'HOSTNAME',
+        open: true,
+        'open-browser': true,
+        'open-path': 'OPEN PATH',
+        'component-dir': 'COMPONENT DIR',
+        'package-name': 'PACKAGE-NAME',
+      };
+      let expectedParsedOptions = {
+        root: userOptions.root,
+        port: userOptions.port,
+        hostname: userOptions.hostname,
+        open: userOptions.open,
+        openBrowser: userOptions['open-browser'],
+        openPath: userOptions['open-path'],
+        componentDir: userOptions['component-dir'],
+        packageName: userOptions['package-name'],
+      };
+      startServerModule.startServer = sinon.stub();
+      startServerModule.startServerWithCliArgs(userOptions);
+      assert.isOk(startServerModule.startServer.calledWithMatch(expectedParsedOptions));
+    });
+
+  })
+  ;
 });
+

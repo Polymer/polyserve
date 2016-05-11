@@ -13,7 +13,7 @@ import {ArgDescriptor} from 'command-line-args';
 import * as path from 'path';
 import * as fs from 'fs';
 import {args} from './args';
-import {startServer, ServerOptions} from './start_server';
+import {startServerWithCliArgs, ServerOptions} from './start_server';
 
 export function run(): Promise<void> {
   return new Promise<void>((resolve, reject) => {
@@ -32,17 +32,6 @@ export function run(): Promise<void> {
       return;
     }
 
-    var options: ServerOptions = {
-      root: cliOptions.root,
-      port: cliOptions.port,
-      hostname: cliOptions.hostname,
-      open: cliOptions.open,
-      browser: cliOptions['browser'],
-      openPath: cliOptions['open-path'],
-      componentDir: cliOptions['component-dir'],
-      packageName: cliOptions['package-name'],
-    }
-
     if (cliOptions.help) {
       printUsage(cli);
       resolve(null);
@@ -50,7 +39,7 @@ export function run(): Promise<void> {
       console.log(getVersion());
       resolve(null);
     } else {
-      return startServer(options);
+      return startServerWithCliArgs(cliOptions);
     }
   });
 }
