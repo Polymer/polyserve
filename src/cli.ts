@@ -12,8 +12,11 @@ import * as commandLineArgs from 'command-line-args';
 import {ArgDescriptor} from 'command-line-args';
 import * as path from 'path';
 import * as fs from 'fs';
+import * as logging from 'plylog';
 import {args} from './args';
 import {startServer, ServerOptions} from './start_server';
+
+const logger = logging.getLogger('polyserve.cli');
 
 export function run(): Promise<void> {
   return new Promise<void>((resolve, reject) => {
@@ -31,6 +34,18 @@ export function run(): Promise<void> {
       resolve(null);
       return;
     }
+
+    // If the "--quiet"/"-q" flag is ever present, set our global logging to quiet mode.
+    if (cliOptions.quiet) {
+      logging.setQuiet();
+    }
+
+    // If the "--verbose"/"-v" flag is ever present, set our global logging to verbose mode.
+    if (cliOptions.verbose) {
+      logging.setVerbose();
+    }
+
+    logger.debug('got options:', { options: cliOptions });
 
     var options: ServerOptions = {
       root: cliOptions.root,
@@ -50,6 +65,7 @@ export function run(): Promise<void> {
       console.log(getVersion());
       resolve(null);
     } else {
+      logger.debug('starting server with options:', { options: options });
       return startServer(options);
     }
   });
