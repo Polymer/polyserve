@@ -17,6 +17,7 @@ import * as opn from 'opn';
 import * as path from 'path';
 import * as send from 'send';
 import * as url from 'url';
+import * as browserSyncFactory  from 'browser-sync';
 
 import { makeApp } from './make_app';
 
@@ -34,6 +35,9 @@ export interface ServerOptions {
   /** Whether to open the browser when run **/
   open?: boolean;
 
+  /** Whether to enable browser-sync for live reload **/
+  liveReload?: boolean;
+
   /** The browser(s) to open when run with open argument **/
   browser?: string[];
 
@@ -46,6 +50,8 @@ export interface ServerOptions {
   /** The package name to use for the root directory **/
   packageName?: string;
 }
+
+let browserSync = browserSyncFactory.create();
 
 function applyDefaultOptions(options: ServerOptions): ServerOptions {
   let withDefaults = Object.assign({}, options);
@@ -143,8 +149,16 @@ function startWithPort(userOptions: ServerOptions) {
     serverStartedReject = reject;
   });
 
-  server = app.listen(options.port, options.hostname,
-      () => serverStartedResolve(server));
+  server = app.listen(options.port, options.hostname, () => {
+    // enable browser-sync once express application is running
+    if (options.liveReload) {
+      browserSync.init({
+        proxy: options.hostname + ':' + options.port,
+        files: [options.root + '/**/*.{js,css,html}']
+      });
+    }
+    serverStartedResolve(server);
+  });
 
   server.on('error', function(err: any) {
     if (err.code === 'EADDRINUSE') {

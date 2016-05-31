@@ -19,6 +19,7 @@
     "polyserve"
   ],
   "dependencies": {
+    "browser-sync": "^2.12.10",
     "command-line-args": "^2.1.6",
     "express": "^4.8.5",
     "find-port": "^1.0.1",

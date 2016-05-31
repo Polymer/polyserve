@@ -69,4 +69,11 @@ export let args : ArgDescriptor[] = [
       ' Defaults to "index.html".',
     type: String,
   },
+  {
+    name: 'live-reload',
+    alias: 'r',
+    description: 'Automatically reload the browser when' +
+      ' a file is changed in the root directory.',
+    type: Boolean,
+  },
 ];
