@@ -67,7 +67,7 @@ export function makeApp(options: AppOptions): PolyserveApplication {
         (<any>res).append(header, headers[header]);
       }
     }
-    send(req, filePath).pipe(res);
+    send(req, filePath, {dotfiles: 'allow'}).pipe(res);
   });
   app.packageName = packageName;
   return app;
