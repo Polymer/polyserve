@@ -14,6 +14,10 @@ import * as path from 'path';
 import * as send from 'send';
 import { parse as parseUrl } from 'url';
 import { bowerConfig } from './bower_config';
+import * as babel from 'babel-core';
+import * as dom5 from 'dom5';
+
+const pred = dom5.predicates;
 
 export interface AppOptions {
   componentDir?: string;
@@ -67,8 +71,40 @@ export function makeApp(options: AppOptions): PolyserveApplication {
         (<any>res).append(header, headers[header]);
       }
     }
-    send(req, filePath).pipe(res);
+    if (filePath.endsWith('.html')) {
+      try {
+        let content = fs.readFileSync(path.resolve(root, filePath), 'utf-8');
+        let ast = dom5.parse(content);
+        dom5.queryAll(ast, isInlineScript).forEach(n => {
+          let scriptContent = dom5.getTextContent(n);
+          let transpiledScriptContent = babel.transform(scriptContent, {presets: ['es2015']}).code;
+          dom5.setTextContent(n, transpiledScriptContent);
+        });
+        let transpiledContent = dom5.serialize(ast);
+        res.status(200).send(transpiledContent);
+      } catch(e) {
+        console.log(e);
+        send(req, filePath).pipe(res);
+      }
+    } else if (filePath.endsWith('.js')) {
+      try {
+        throw 'skip js';
+        let content = fs.readFileSync(path.resolve(root, filePath), 'utf-8');
+        let transpiledContent = babel.transform(content, {presets: ['es2015']}).code;
+        res.status(200).send(transpiledContent);
+      } catch(e) {
+        console.log(e);
+        send(req, filePath).pipe(res);
+      }
+    } else {
+      send(req, filePath).pipe(res);
+    }
   });
   app.packageName = packageName;
   return app;
 }
+
+const isInlineScript = pred.AND(
+  pred.hasTagName('script'),
+  pred.NOT(pred.hasAttr('src'))
+);
