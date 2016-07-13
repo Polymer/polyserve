@@ -4,6 +4,10 @@
   "devDependencies": {},
   "ambientDependencies": {
     "babel-core": "registry:dt/babel-core#6.7.0+20160423062108",
+    "babel-template": "registry:dt/babel-template#6.7.0+20160423062108",
+    "babel-traverse": "registry:dt/babel-traverse#6.7.0+20160423062108",
+    "babel-types": "registry:dt/babel-types#6.7.0+20160423062108",
+    "babylon": "registry:dt/babylon#6.7.0+20160423062108",
     "express": "github:DefinitelyTyped/DefinitelyTyped/express/express.d.ts#dd638012d63e069f2c99d06ef4dcc9616a943ee4",
     "mime": "github:DefinitelyTyped/DefinitelyTyped/mime/mime.d.ts#cb5206a8ac1c9a3ddfd126f5ecea6729b2361452",
     "node": "github:DefinitelyTyped/DefinitelyTyped/node/node-0.12.d.ts#093a2b32d420e2cddbe9e8bc44a6a2fc14b3cbe3",
