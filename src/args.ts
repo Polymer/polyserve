@@ -13,9 +13,20 @@ import {ArgDescriptor} from 'command-line-args';
 export let args : ArgDescriptor[] = [
   {
     name: 'version',
-    alias: 'v',
     description: 'Print version info',
     type: Boolean,
+  },
+  {
+    name: 'verbose',
+    description: 'turn on debugging output',
+    type: Boolean,
+    alias: 'v',
+  },
+  {
+    name: 'quiet',
+    description: 'silence output',
+    type: Boolean,
+    alias: 'q',
   },
   {
     name: 'root',

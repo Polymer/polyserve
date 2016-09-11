@@ -14,6 +14,9 @@ import * as path from 'path';
 import * as send from 'send';
 import { parse as parseUrl } from 'url';
 import { bowerConfig } from './bower_config';
+import * as logging from 'plylog';
+
+const logger = logging.getLogger('polyserve.make_app');
 
 export interface AppOptions {
   componentDir?: string;
@@ -44,6 +47,7 @@ export function makeApp(options: AppOptions): PolyserveApplication {
       || path.basename(process.cwd());
   let headers = options.headers || {};
 
+  logger.debug('Creating express app...', { options: options });
   let app: PolyserveApplication = <PolyserveApplication>express();
 
   app.get('*', function (req, res) {

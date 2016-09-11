@@ -17,8 +17,11 @@ import * as opn from 'opn';
 import * as path from 'path';
 import * as send from 'send';
 import * as url from 'url';
+import * as logging from 'plylog';
 
 import { makeApp } from './make_app';
+
+const logger = logging.getLogger('polyserve.start_server');
 
 export interface ServerOptions {
 
@@ -86,7 +89,7 @@ export function getApp(options: ServerOptions) {
 
   let app = express();
 
-  console.log(`Starting Polyserve...
+  logger.info(`Starting Polyserve...
     serving on port: ${port}
     from root: ${root}
   `);
@@ -129,7 +132,7 @@ function openWebPage(url: string, withBrowser?: string) {
   opn(url, openOptions, (err) => {
     if (err) {
       // log error and continue
-      console.error(`ERROR: Problem launching "${openOptions.app || 'default web browser'}".`);
+      logger.error(`ERROR: Problem launching "${openOptions.app || 'default web browser'}".`);
     }
   });
 }
@@ -150,7 +153,7 @@ function startWithPort(userOptions: ServerOptions) {
 
   server.on('error', function(err: any) {
     if (err.code === 'EADDRINUSE') {
-      console.error(portInUseMessage(options.port));
+      logger.error(portInUseMessage(options.port));
     }
     serverStartedReject(err);
   });
@@ -163,7 +166,7 @@ function startWithPort(userOptions: ServerOptions) {
   let componentUrl: url.Url = Object.assign({}, serverUrl);
   componentUrl.pathname = `components/${options.packageName}/`;
 
-  console.log(`Files in this directory are available under the following URLs
+  logger.info(`Files in this directory are available under the following URLs
     applications: ${url.format(serverUrl)}
     reusable components: ${url.format(componentUrl)}`);
 
