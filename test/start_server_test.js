@@ -64,4 +64,15 @@ suite('startServer', () => {
     })
   });
 
+  test('does not serve any dotfiles', (done) => {
+    let app = getApp({
+      root: __dirname,
+    });
+    supertest(app)
+      .get('/.dotfiles-test-folder/index.html')
+      .expect(404)
+      .end(done);
+  });
+
+
 });
