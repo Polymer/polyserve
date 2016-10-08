@@ -22,6 +22,7 @@ import * as send from 'send';
 // TODO: Switch to node-http2 when compatible with express
 // https://github.com/molnarg/node-http2/issues/100
 import * as http from 'spdy';
+import * as proxy from 'http-proxy';
 import * as url from 'url';
 
 import {bowerConfig} from './bower_config';
@@ -30,6 +31,11 @@ import {nextOpenPort} from './util/next_open_port';
 import {openBrowser} from './util/open_browser';
 import {getPushManifest, pushResources} from './util/push';
 import {getTLSCertificate} from './util/tls';
+
+import findPort = require('find-port');
+import opn = require('opn');
+// Cant be an import since httpProxy is not a function, but an object instead
+const httpProxy = require('http-proxy');
 
 export interface ServerOptions {
   /** The root directory to serve **/
@@ -70,6 +76,12 @@ export interface ServerOptions {
 
   /** Path to H2 push-manifest file */
   pushManifestPath?: string;
+
+  /** Path to proxy from */
+  proxyRoot?: string;
+
+  /** Path to proxy to */
+  proxyTarget?: string;
 }
 
 async function applyDefaultOptions(options: ServerOptions):
@@ -292,6 +304,23 @@ export function getApp(options: ServerOptions): express.Express {
   const filePathRegex: RegExp = /.*\/.+\..{1,}$/;
 
   app.use('/components/', polyserve);
+
+  if (options.proxyRoot && options.proxyTarget) {
+    const apiProxy = httpProxy.createProxyServer();
+    const proxyHandler = (req: express.Request, res: express.Response) => {
+      // Remove proxied part from the url
+      req.url = req.url.slice(options.proxyRoot.length + 1);
+      apiProxy.web(req, res, { target: options.proxyTarget }, (error: proxy.ProxyError) => {
+        res.statusCode = error.status || 500;
+        res.end(error.message);
+      });
+    };
+
+    app.post(`/${options.proxyRoot}/*`, proxyHandler);
+    app.get(`/${options.proxyRoot}/*`, proxyHandler);
+    app.put(`/${options.proxyRoot}/*`, proxyHandler);
+    app.delete(`/${options.proxyRoot}/*`, proxyHandler);
+  }
 
   app.get('/*', (req, res) => {
     pushResources(options, req, res);

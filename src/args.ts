@@ -110,4 +110,14 @@ export let args: ArgDescriptor[] = [
     description: 'Path to h2-push manifest',
     type: String,
   },
+  {
+    name: 'proxy-root',
+    description: 'Top-level folder that should be redirected to the proxy-target. E.g. `foo` when you want to redirect all requests of `https://localhost/foo/`',
+    type: String,
+  },
+  {
+    name: 'proxy-target',
+    description: 'Host url to proxy to, for example `https://myredirect:8080/foo`',
+    type: String,
+  },
 ];
