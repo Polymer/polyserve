@@ -278,7 +278,7 @@ suite('startServer', () => {
       });
     }
 
-    function _deleteFiles(files: Iterable<string>) {
+    function _deleteFiles(files: string[]) {
       for (const file of files) {
         try {
           fs.unlinkSync(file);
