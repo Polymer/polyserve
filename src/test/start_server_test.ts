@@ -19,7 +19,7 @@ import * as path from 'path';
 import * as pem from 'pem';
 import * as sinon from 'sinon';
 import * as http from 'spdy';
-import * as supertest from 'supertest';
+import * as supertest from 'supertest-as-promised';
 import * as tmp from 'tmp';
 
 import {getApp, ServerOptions} from '../start_server';
@@ -34,31 +34,62 @@ const root = path.join(__dirname, '..', '..', 'test');
 suite('startServer', () => {
 
   test('returns an app', () => {
-    let app = getApp({});
+    const app = getApp({});
     assert.isOk(app);
   });
 
   test('serves root application files', (done) => {
-    let app = getApp({root});
+    const app = getApp({root});
     supertest(app).get('/test-file.txt').expect(200, 'PASS\n').end(done);
   });
 
   test('serves component files', (done) => {
-    let app = getApp({root});
+    const app = getApp({root});
     supertest(app)
         .get('/bower_components/test-component/test-file.txt')
         .expect(200, 'TEST COMPONENT\n')
         .end(done);
   });
 
+  suite('variants', () => {
+
+    const variantsRoot = path.join(root, 'variants');
+
+    let prevCwd: string;
+    setup(() => {
+      prevCwd = process.cwd();
+      process.chdir(variantsRoot);
+    });
+
+    teardown(() => {
+      process.chdir(prevCwd);
+    });
+
+    test('serves files out of a given components directory', async() => {
+      await supertest(getApp({}))
+          .get('/components/contents.txt')
+          .expect(200, 'mainline\n');
+
+      await supertest(getApp({componentDir: 'bower_components-foo'}))
+          .get('/components/contents.txt')
+          .expect(200, 'foo\n');
+
+      await supertest(getApp({componentDir: 'bower_components-bar'}))
+          .get('/components/contents.txt')
+          .expect(200, 'bar\n');
+    });
+
+  });
+
+
   test('serves index.html, not 404', (done) => {
-    let app = getApp({root});
+    const app = getApp({root});
     supertest(app).get('/foo').expect(200, 'INDEX\n').end(done);
   });
 
   ['html', 'js', 'json', 'css', 'png', 'jpg', 'jpeg', 'gif'].forEach(
       (ext) => {test(`404s ${ext} files`, (done) => {
-        let app = getApp({root});
+        const app = getApp({root});
 
         supertest(app).get('/foo.' + ext).expect(404).end(done);
       })});

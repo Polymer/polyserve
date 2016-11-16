@@ -45,6 +45,7 @@ export function makeApp(options: AppOptions): PolyserveApplication {
   options = options || {};
   const root = options.root;
   const componentDir = options.componentDir || 'bower_components';
+  console.log(componentDir);
   const packageName = options.packageName || bowerConfig(root).name ||
       path.basename(process.cwd());
   const headers = options.headers || {};
@@ -66,6 +67,8 @@ export function makeApp(options: AppOptions): PolyserveApplication {
       splitPath = [componentDir].concat(splitPath);
     }
     const filePath = splitPath.join('/');
+    console.log(splitPath);
+    console.log(filePath);
 
     if (headers) {
       for (const header in headers) {
