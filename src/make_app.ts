@@ -46,6 +46,8 @@ export interface PolyserveApplication extends express.Express {
  */
 export function makeApp(options: AppOptions): PolyserveApplication {
   options = options || {};
+  // Doing option fallback here and in start_server is awkward. We should have
+  // just one.
   const root = options.root;
   const componentDir = options.componentDir || 'bower_components';
   let packageName = options.packageName;

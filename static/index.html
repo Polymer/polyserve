@@ -1,0 +1,56 @@
+<html>
+
+<head>
+  <title>Polyserve</title>
+</head>
+
+<body>
+
+  <script>
+    var xhr = new XMLHttpRequest();
+    xhr.addEventListener("load", function() {
+      writeServers(JSON.parse(xhr.responseText));
+    });
+    xhr.open("GET", "/api/serverInfo");
+    xhr.send();
+
+    function writeServers(serverInfo) {
+      var list = document.createElement('ul');
+      console.log(serverInfo);
+      list.appendChild(formatServer('mainline', serverInfo.mainlineServer.port, serverInfo.packageName));
+      for (var i = 0; i < serverInfo.variants.length; i++) {
+        var variant = serverInfo.variants[i];
+        list.appendChild(formatServer(variant.name, variant.port, serverInfo.packageName));
+      }
+      document.body.appendChild(list);
+    }
+
+    function formatServer(name, port, packageName) {
+      var li = document.createElement('li');
+      li.textContent = name;
+      var urlsList = document.createElement('ul');
+      li.appendChild(urlsList);
+      var applicationLi = document.createElement('li');
+      urlsList.appendChild(applicationLi);
+      var applicationLink = document.createElement('a');
+      applicationLi.appendChild(applicationLink);
+      applicationLink.href = window.location.href;
+      applicationLink.port = port;
+      applicationLink.pathname = '/';
+      applicationLink.textContent = applicationLink.href;
+
+      var componentLi = document.createElement('li');
+      urlsList.appendChild(componentLi);
+      var componentLink = document.createElement('a');
+      componentLi.appendChild(componentLink);
+      componentLink.href = window.location.href;
+      componentLink.port = port;
+      componentLink.pathname = '/components/' + packageName;
+      componentLink.textContent = componentLink.href;
+
+      return li;
+    }
+  </script>
+</body>
+
+</html>

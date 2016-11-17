@@ -25,13 +25,13 @@ import * as send from 'send';
 import * as http from 'spdy';
 import * as url from 'url';
 
+import {bowerConfig} from './bower_config';
+import {nextOpenPort} from './internal/next_open_port';
+
 import {makeApp} from './make_app';
 import {openBrowser} from './util/open_browser';
 import {getPushManifest, pushResources} from './util/push';
 import {getTLSCertificate} from './util/tls';
-
-import findPort = require('find-port');
-
 
 export interface ServerOptions {
   /** The root directory to serve **/
@@ -71,53 +71,38 @@ export interface ServerOptions {
   pushManifestPath?: string;
 }
 
-async function applyDefaultOptions(options: ServerOptions):
+export async function applyDefaultOptions(options: ServerOptions):
     Promise<ServerOptions> {
-      const withDefaults = Object.assign({}, options);
-      Object.assign(withDefaults, {
-        port: await nextOpenPort(options.port),
-        hostname: options.hostname || 'localhost',
-        root: path.resolve(options.root || '.'),
-        certPath: options.certPath || 'cert.pem',
-        keyPath: options.keyPath || 'key.pem',
-      });
-      return withDefaults;
-    }
+  const withDefaults = Object.assign({}, options);
+  Object.assign(withDefaults, {
+    port: await nextOpenPort(options.port),
+    hostname: options.hostname || 'localhost',
+    root: path.resolve(options.root || '.'),
+    certPath: options.certPath || 'cert.pem',
+    keyPath: options.keyPath || 'key.pem',
+  });
+  options.packageName = options.packageName || bowerConfig(options.root).name ||
+      path.basename(process.cwd());
+  return withDefaults;
+}
 
-/**
- * If port unspecified/negative, finds an open port on localhost
- * @param {number} port
- * @returns {Promise<number>} Promise of open port
- */
-async function nextOpenPort(port: number):
-    Promise<number> {
-      if (!port || port < 0) {
-        port = await new Promise<number>(resolve => {
-          // TODO: Switch from `find-port` to `get-port`. `find-port` always
-          // resolves a port number even if none are available. The error-event
-          // handler in `startWithPort` catches the issue.
-          findPort(8080, 8180, (ports: number[]) => {
-            resolve(ports[0]);
-          });
-        });
-      }
-      return port;
-    }
 
 /**
  * @return {Promise} A Promise that completes when the server has started.
  */
 export async function startServer(options: ServerOptions):
     Promise<http.Server> {
-      options = options || {};
-      assertNodeVersion(options);
-      try {
-        return await startWithPort(options)
-      } catch (e) {
-        console.error('ERROR: Server failed to start:', e);
-        throw new Error(e);
-      }
-    }
+  options = options || {};
+  assertNodeVersion(options);
+  try {
+    const fullOptions = await applyDefaultOptions(options);
+    const app = getApp(options);
+    return await startWithPort(fullOptions, app)
+  } catch (e) {
+    console.error('ERROR: Server failed to start:', e);
+    throw new Error(e);
+  }
+}
 
 const portInUseMessage = (port: number) => `
 ERROR: Port in use: ${port}
@@ -133,11 +118,6 @@ export function getApp(options: ServerOptions): express.Express {
   const port = options.port;
   const root = options.root;
   const app = express();
-
-  console.log(`Starting Polyserve...
-    serving on port: ${port}
-    from root: ${root}
-  `);
 
   const polyserve = makeApp({
     componentDir: options.componentDir,
@@ -183,30 +163,17 @@ function isHttps(protocol: string): boolean {
  * @returns {{serverUrl: {protocol: string, hostname: string, port: string},
  * componentUrl: url.Url}}
  */
-function getServerUrls(options: ServerOptions) {
-  const serverUrl = {
+export function getServerUrls(options: ServerOptions, server: http.Server) {
+  const address = server.address();
+  const serverUrl: url.Url = {
     protocol: isHttps(options.protocol) ? 'https' : 'http',
-    hostname: options.hostname,
-    port: `${options.port}`,
+    hostname: address.address,
+    port: String(address.port),
   };
   const componentUrl: url.Url = Object.assign({}, serverUrl);
   componentUrl.pathname = `components/${options.packageName}/`;
   return {serverUrl, componentUrl};
 }
-
-/**
- * Handles server-ready tasks (prints URLs and opens browser)
- * @param {ServerOptions} options
- */
-function handleServerReady(options: ServerOptions) {
-  const urls = getServerUrls(options);
-  console.log(`Files in this directory are available under the following URLs
-    applications: ${url
-                  .format(urls.serverUrl)}
-    reusable components: ${url.format(urls.componentUrl)}`);
-  openBrowser(options, urls.serverUrl, urls.componentUrl);
-}
-
 
 /**
  * Asserts that Node version is valid for h2 protocol
@@ -230,7 +197,7 @@ function assertNodeVersion(options: ServerOptions) {
  * @param {ServerOptions} options
  * @returns {Promise<http.Server>} Promise of server
  */
-async function createServer(app: any, options: ServerOptions):
+async function createServer(app: express.Application, options: ServerOptions):
     Promise<http.Server> {
       const opt: any = {spdy: {protocols: [options.protocol]}};
 
@@ -243,7 +210,7 @@ async function createServer(app: any, options: ServerOptions):
         opt.spdy.ssl = false;
       }
 
-      return http.createServer(opt, app);
+      return http.createServer(opt, app as any);
     }
 
 /**
@@ -251,13 +218,11 @@ async function createServer(app: any, options: ServerOptions):
  * @param {ServerOptions} userOptions
  * @returns {Promise<http.Server>} Promise of server
  */
-async function startWithPort(userOptions: ServerOptions): Promise<http.Server> {
-  const options = await applyDefaultOptions(userOptions);
-  const app = getApp(options);
+export async function startWithPort(
+    options: ServerOptions, app: express.Application): Promise<http.Server> {
   const server = await createServer(app, options);
   await new Promise((resolve, reject) => {
     server.listen(options.port, options.hostname, () => {
-      handleServerReady(options);
       resolve();
     });
 
@@ -268,5 +233,8 @@ async function startWithPort(userOptions: ServerOptions): Promise<http.Server> {
       reject(err);
     });
   });
+  const {serverUrl, componentUrl} = getServerUrls(options, server);
+  openBrowser(options, serverUrl, componentUrl);
+
   return server;
 }
