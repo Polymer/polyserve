@@ -99,9 +99,10 @@ function needCompilation(uaParser: UAParser): boolean {
   const versionSplit = browser.version && browser.version.split('.');
   const majorVersion = versionSplit ? parseInt(versionSplit[0], 10) : -1;
 
-  const supportsES6 =
+  const supportsES2015 =
       (browser.name === 'Chrome' && majorVersion >= 49) ||
       (browser.name === 'Safari' && majorVersion >= 10) ||
-      (browser.name === 'Edge' && majorVersion >= 14);
-  return !supportsES6;
+      (browser.name === 'Edge' && majorVersion >= 14) ||
+      (browser.name === 'Firefox' && majorVersion >= 51);
+  return !supportsES2015;
 }
