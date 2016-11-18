@@ -18,7 +18,7 @@ import * as path from 'path';
 import { parse as parseUrl } from 'url';
 import { bowerConfig } from './bower_config';
 import { babelCompile } from './compile-middleware';
-import {Response, Request} from 'express';
+import { Response, Request } from 'express';
 
 import send = require('send');
 import mime = require('mime');
