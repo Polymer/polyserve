@@ -45,7 +45,7 @@ function isSuccessful(response: Response) {
 export const babelCompile: RequestHandler = transformResponse({
   shouldTransform(request: Request, response: Response) {
     return isSuccessful(response) &&
-        compileMimeTypes.includes(getContentType(response));
+        compileMimeTypes.indexOf(getContentType(response)) >= 0;
   },
 
   transform(request: Request, response: Response, body: string): string {
@@ -74,7 +74,7 @@ export const babelCompile: RequestHandler = transformResponse({
           }
         }
         return parse5.serialize(document);
-      } else if (javaScriptMimeTypes.includes(contentType)) {
+      } else if (javaScriptMimeTypes.indexOf(contentType) >= 0) {
         try {
           const compiledScriptResult = babelCore.transform(body, {
             presets: [babelLatest],
