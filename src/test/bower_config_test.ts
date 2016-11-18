@@ -12,6 +12,16 @@
  * http://polymer.github.io/PATENTS.txt
  */
 
-export {args} from './args';
-export {makeApp} from './make_app';
-export {startServer} from './start_server';
+import {assert} from 'chai';
+import * as path from 'path';
+
+import {bowerConfig} from '../bower_config';
+
+suite('bowerConfig', () => {
+
+  test('reads bower.json', () => {
+    let config = bowerConfig(path.join(__dirname, '..', '..', 'test'));
+    assert.equal(config.name, 'polyserve-test');
+  });
+
+});

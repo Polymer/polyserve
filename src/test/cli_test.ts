@@ -12,6 +12,21 @@
  * http://polymer.github.io/PATENTS.txt
  */
 
-export {args} from './args';
-export {makeApp} from './make_app';
-export {startServer} from './start_server';
+import {assert} from 'chai';
+import {run as cliRun} from '../cli';
+
+suite('cli', () => {
+
+  test('unknown cmd parameter should not throw exception', () => {
+    const originalArgv = process.argv;
+    process.argv = ['node', 'polyserve', '--unknown-parameter'];
+
+    try {
+      return cliRun();
+    } finally {
+      // restore process arguments for other readers
+      process.argv = originalArgv;
+    }
+  });
+
+});
