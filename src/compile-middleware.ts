@@ -96,8 +96,8 @@ const isInlineJavaScript = dom5.predicates.AND(
 function needCompilation(uaParser: UAParser): boolean {
   const engine = uaParser.getEngine();
   const browser = uaParser.getBrowser();
-  const versionSplit = browser.version.split('.');
-  const majorVersion = parseInt(versionSplit[0], 10);
+  const versionSplit = browser.version && browser.version.split('.');
+  const majorVersion = versionSplit ? parseInt(versionSplit[0], 10) : -1;
 
   const supportsES6 =
       (browser.name === 'Chrome' && majorVersion >= 49) ||
