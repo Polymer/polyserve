@@ -46,7 +46,6 @@ export function transformResponse(transformer: ResponseTransformer): RequestHand
 
     const _end = res.end;
     res.end = function(chunk?: Buffer|string, cbOrEncoding?: Function|string, cbOrFd?: Function|string): boolean {
-      console.log(`res.end ${req.path}`);
       if (ended) return false;
       ended = true;
 
