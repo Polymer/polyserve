@@ -81,8 +81,8 @@ export async function applyDefaultOptions(options: ServerOptions):
     certPath: options.certPath || 'cert.pem',
     keyPath: options.keyPath || 'key.pem',
   });
-  options.packageName = options.packageName || bowerConfig(options.root).name ||
-      path.basename(process.cwd());
+  withDefaults.packageName = options.packageName ||
+      bowerConfig(withDefaults.root).name || path.basename(process.cwd());
   return withDefaults;
 }
 
@@ -103,6 +103,107 @@ export async function startServer(options: ServerOptions):
     throw new Error(e);
   }
 }
+
+export type ServerInfo = MainlineServer | VariantServer | DispatchServer;
+export interface MainlineServer {
+  kind: 'mainline';
+  server: http.Server;
+  options: ServerOptions;
+}
+export interface VariantServer {
+  kind: 'variant';
+  server: http.Server;
+  options: ServerOptions;
+  variantName: string;
+}
+export interface DispatchServer {
+  kind: 'dispatch';
+  server: http.Server;
+  options: ServerOptions;
+}
+
+/**
+ * Starts one or more web servers, based on the given options and
+ * variant bower_components directories that are found in the root dir.
+ */
+export async function startServers(options: ServerOptions):
+    Promise<ServerInfo[]> {
+  const root = options.root || process.cwd();
+  const filesInRoot = await fs.readdir(root);
+  const variantNames = filesInRoot
+                           .map(f => {
+                             const match = f.match(/^bower_components-(.*)/!);
+                             return match && match[1];
+                           })
+                           .filter(f => f != null && f !== '');
+  if (variantNames.length > 0) {
+    return await startVariants(options, variantNames);
+  }
+
+  return [{kind: 'mainline', server: await startServer(options), options}];
+}
+
+async function startVariants(options: ServerOptions, variantNames: string[]) {
+  const serverInfos: ServerInfo[] = [];
+  const mainlineOptions = Object.assign({}, options);
+  mainlineOptions.port = 0;
+  const mainServer = await startServer(mainlineOptions);
+  serverInfos.push(
+      {kind: 'mainline', server: mainServer, options: mainlineOptions});
+
+  for (const variant of variantNames) {
+    const variantOpts = Object.assign({}, options);
+    variantOpts.port = 0;
+    variantOpts.componentDir = `bower_components-${variant}`;
+    serverInfos.push({
+      kind: 'variant',
+      variantName: variant,
+      server: await startServer(variantOpts),
+      options: variantOpts
+    });
+  };
+
+  serverInfos.push(await startDispatchServer(options, serverInfos));
+
+  return serverInfos;
+}
+
+async function startDispatchServer(
+    options: ServerOptions, serverInfos: ServerInfo[]) {
+  const fullOptions = await applyDefaultOptions(options);
+  const app = express();
+  const mainlineInfo =
+      serverInfos.find(s => s.kind === 'mainline') as MainlineServer;
+  const variantInfos =
+      serverInfos.filter(s => s.kind === 'variant') as VariantServer[];
+  app.get('/api/serverInfo', (req, res) => {
+    res.contentType('json');
+    res.send(JSON.stringify({
+      packageName: fullOptions.packageName,
+      mainlineServer: {
+        port: mainlineInfo.server.address().port,
+      },
+      variants: variantInfos.map(info => {
+        return {name: info.variantName, port: info.server.address().port};
+      })
+    }));
+    res.end();
+  });
+  const indexPath = path.join(__dirname, '..', 'static', 'index.html');
+  app.get('/', async(req, res) => {
+    res.contentType('html');
+    const indexContents = await fs.readFile(indexPath, 'utf-8');
+    res.send(indexContents);
+    res.end();
+  });
+  const dispatchServer: DispatchServer = {
+    kind: 'dispatch',
+    options: fullOptions,
+    server: await startWithPort(fullOptions, app),
+  };
+  return dispatchServer;
+}
+
 
 const portInUseMessage = (port: number) => `
 ERROR: Port in use: ${port}

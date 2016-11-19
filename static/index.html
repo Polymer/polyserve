@@ -2,11 +2,45 @@
 
 <head>
   <title>Polyserve</title>
+  <link href="https://fonts.googleapis.com/css?family=Roboto|Roboto+Mono"
+    rel="stylesheet">
+  <style>
+    body {
+      margin: 40px;
+      font-family: 'Roboto', sans-serif;
+    }
+    
+    ul {
+      padding-top: 8px;
+      padding-bottom: 20px;
+    }
+    
+    li {
+      padding-bottom: 8px;
+    }
+    
+    a {
+      font-family: 'Roboto Mono', monospace;
+    }
+  </style>
 </head>
 
 <body>
 
+  <h1>Polyserve</h1>
+
+  <div>
+    Each variant represents a different configuration or set of dependencies
+    that you can run your code under. They're served under different
+    ports so that each is a standalone server, in isolation of
+    the others.
+  </div>
+
+  <h2>Variants:</h2>
   <script>
+    // This code is minimal and zero-dependency for the moment, just so that
+    // installing polymer-cli doesn't take any longer than it already does.
+    // Should revisit if it grows any more complicated.
     var xhr = new XMLHttpRequest();
     xhr.addEventListener("load", function() {
       writeServers(JSON.parse(xhr.responseText));
@@ -16,11 +50,12 @@
 
     function writeServers(serverInfo) {
       var list = document.createElement('ul');
-      console.log(serverInfo);
-      list.appendChild(formatServer('mainline', serverInfo.mainlineServer.port, serverInfo.packageName));
+      list.appendChild(formatServer(
+          'mainline', serverInfo.mainlineServer.port, serverInfo.packageName));
       for (var i = 0; i < serverInfo.variants.length; i++) {
         var variant = serverInfo.variants[i];
-        list.appendChild(formatServer(variant.name, variant.port, serverInfo.packageName));
+        list.appendChild(
+            formatServer(variant.name, variant.port, serverInfo.packageName));
       }
       document.body.appendChild(list);
     }

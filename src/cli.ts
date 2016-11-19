@@ -20,7 +20,7 @@ import * as http from 'spdy';
 import * as url from 'url';
 
 import {args} from './args';
-import {ServerOptions, applyDefaultOptions, getServerUrls, startServer, startWithPort} from './start_server';
+import {applyDefaultOptions, getServerUrls, ServerOptions, startServers, startWithPort} from './start_server';
 
 import commandLineArgs = require('command-line-args');
 import commandLineUsage = require('command-line-usage');
@@ -67,33 +67,29 @@ export async function run(): Promise<void> {
     return;
   }
 
-  const root = options.root || process.cwd();
-  const filesInRoot = await fs.readdir(root);
-  const variantNames = filesInRoot
-                           .map(f => {
-                             const match = f.match(/^bower_components-(.*)/!);
-                             return match && match[1];
-                           })
-                           .filter(f => f != null && f !== '');
-  if (variantNames.length > 0) {
-    await startVariants(options, variantNames);
-    return;
-  }
+  const serverInfos = await startServers(options);
 
-  const server = await startServer(options);
-  /**
-   *Files in this directory are available under the following URLs
-    applications: http://localhost:8080
-    reusable components: http://localhost:8080/components/polyserve-test/
-
-   */
-  const {serverUrl, componentUrl} = getServerUrls(options, server);
-  console.log(`Files in this directory are available under the following URLs
-    applications: ${url.format(serverUrl)}
+  if (serverInfos.length === 1) {
+    const {serverUrl, componentUrl} =
+        getServerUrls(options, serverInfos[0]!.server);
+    console.log(`Files in this directory are available under the following URLs
+    applications: ${
+                  url.format(serverUrl)}
     reusable components: ${url.format(componentUrl)}
-  `);
+  `)
+  } else {
+    const dispatchServer = serverInfos.find(s => s.kind === 'dispatch');
+    if (!dispatchServer) {
+      throw new Error(
+          'Internal Error: Launched multiple servers but ' +
+          'didn\'t launch a dispatch server.');
+    }
+    const {serverUrl} = getServerUrls(options, dispatchServer.server);
+    console.log(`Started multiple servers with different variants:
+    Dispatch server: ${
+      url.format(serverUrl)}`);
+  }
 }
-
 
 function printUsage(options: any): void {
   const usage = commandLineUsage([{
@@ -110,54 +106,4 @@ function getVersion(): string {
   const packageJson = JSON.parse(packageFile);
   const version = packageJson['version'];
   return version;
-}
-
-async function startVariants(options: ServerOptions, variantNames: string[]) {
-  const mainlineOptions = Object.assign({}, options);
-  mainlineOptions.port = 0;
-  const mainServer = await startServer(mainlineOptions);
-  const variantServers = new Map<string, http.Server>();
-
-  for (const variant of variantNames) {
-    const variantOpts = Object.assign({}, options);
-    variantOpts.port = 0;
-    variantOpts.componentDir = `bower_components-${variant}`;
-    variantServers.set(variant, await startServer(variantOpts));
-  };
-
-  const metaServer = await startMetaServer(options, mainServer, variantServers);
-  const {serverUrl} = getServerUrls(options, metaServer);
-
-  console.log(`Started multiple servers, serving different variants.
-    dispatch server: ${url.format(serverUrl)}
-  `);
-}
-
-async function startMetaServer(
-    options: ServerOptions,
-    mainlineServer: http.Server,
-    variantServers: Map<string, http.Server>) {
-  const fullOptions = await applyDefaultOptions(options);
-  const app = express();
-  app.get('/api/serverInfo', (req, res) => {
-    res.contentType('json');
-    res.send(JSON.stringify({
-      packageName: fullOptions.packageName,
-      mainlineServer: {
-        port: mainlineServer.address().port,
-      },
-      variants: Array.from(variantServers.entries()).map(([name, server]) => {
-        return {name, port: server.address().port};
-      })
-    }));
-    res.end();
-  });
-  const indexPath = path.join(__dirname, '..', 'static', 'index.html');
-  app.get('/', async(req, res) => {
-    res.contentType('html');
-    const indexContents = await fs.readFile(indexPath, 'utf-8');
-    res.send(indexContents);
-    res.end();
-  });
-  return startWithPort(fullOptions, app);
 }
