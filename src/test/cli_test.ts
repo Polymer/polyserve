@@ -14,19 +14,41 @@
 
 import {assert} from 'chai';
 import {run as cliRun} from '../cli';
+import intercept = require('intercept-stdout');
 
 suite('cli', () => {
-
-  test('unknown cmd parameter should not throw exception', () => {
+  // Why not do this setup and teardown in the setup() and teardown() methods?
+  // because you don't want to trap stdout at test end, as that traps mocha's
+  // output.
+  // TODO(rictic): look into using spawn() to run polyserve in another process
+  //     instead. That way we could actually get it started and run it for a
+  //     while, hit it with requests, etc.
+  async function runCli(args: string[]) {
     const originalArgv = process.argv;
-    process.argv = ['node', 'polyserve', '--unknown-parameter'];
+    process.argv = ['node', 'polyserve'].concat(args);
+    let stdout = '';
+    let unintercept = intercept((txt) => {
+      stdout += txt;
+      return '';
+    });
 
     try {
-      return cliRun();
+      await cliRun();
     } finally {
-      // restore process arguments for other readers
+      unintercept();
       process.argv = originalArgv;
     }
+    return stdout;
+  }
+
+  test('unknown cmd parameter should not throw exception', async() => {
+    const stdout = await runCli(['--unknown-parameter']);
+
+    // Assert that we printed something that looks kinda like help text to
+    // stdout.
+    assert.match(stdout, /A development server for Polymer projects/);
+    assert.match(stdout, /--version/);
+    assert.match(stdout, /--package-name/);
   });
 
 });
