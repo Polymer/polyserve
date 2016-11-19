@@ -136,6 +136,8 @@ export async function startServers(options: ServerOptions):
                              return match && match[1];
                            })
                            .filter(f => f != null && f !== '');
+  // TODO(rictic): support manually configuring variants? tracking more
+  //   metadata about them besides their names?
   if (variantNames.length > 0) {
     return await startVariants(options, variantNames);
   }
