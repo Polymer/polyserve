@@ -89,15 +89,22 @@ export async function applyDefaultOptions(options: ServerOptions):
 
 /**
  * @return {Promise} A Promise that completes when the server has started.
+ * @deprecated Please use `startServers` instead. This function will be removed
+ *     in a future release.
  */
 export async function startServer(options: ServerOptions):
     Promise<http.Server> {
+  return (await _startServer(options)).server;
+}
+
+async function _startServer(options: ServerOptions) {
   options = options || {};
   assertNodeVersion(options);
   try {
     const fullOptions = await applyDefaultOptions(options);
     const app = getApp(options);
-    return await startWithPort(fullOptions, app)
+    const server = await startWithPort(fullOptions, app);
+    return {app, server};
   } catch (e) {
     console.error('ERROR: Server failed to start:', e);
     throw new Error(e);
@@ -108,17 +115,20 @@ export type ServerInfo = MainlineServer | VariantServer | DispatchServer;
 export interface MainlineServer {
   kind: 'mainline';
   server: http.Server;
+  app: express.Application;
   options: ServerOptions;
 }
 export interface VariantServer {
   kind: 'variant';
   server: http.Server;
+  app: express.Application;
   options: ServerOptions;
   variantName: string;
 }
 export interface DispatchServer {
   kind: 'dispatch';
   server: http.Server;
+  app: express.Application;
   options: ServerOptions;
 }
 
@@ -142,25 +152,36 @@ export async function startServers(options: ServerOptions):
     return await startVariants(options, variantNames);
   }
 
-  return [{kind: 'mainline', server: await startServer(options), options}];
+  const serverAndApp = await _startServer(options);
+  return [{
+    kind: 'mainline',
+    server: serverAndApp.server,
+    app: serverAndApp.app, options
+  }];
 }
 
 async function startVariants(options: ServerOptions, variantNames: string[]) {
   const serverInfos: ServerInfo[] = [];
   const mainlineOptions = Object.assign({}, options);
   mainlineOptions.port = 0;
-  const mainServer = await startServer(mainlineOptions);
-  serverInfos.push(
-      {kind: 'mainline', server: mainServer, options: mainlineOptions});
+  const mainServer = await _startServer(mainlineOptions);
+  serverInfos.push({
+    kind: 'mainline',
+    server: mainServer.server,
+    app: mainServer.app,
+    options: mainlineOptions,
+  });
 
   for (const variant of variantNames) {
     const variantOpts = Object.assign({}, options);
     variantOpts.port = 0;
     variantOpts.componentDir = `bower_components-${variant}`;
+    const variantServer = await _startServer(variantOpts);
     serverInfos.push({
       kind: 'variant',
       variantName: variant,
-      server: await startServer(variantOpts),
+      server: variantServer.server,
+      app: variantServer.app,
       options: variantOpts
     });
   };
@@ -201,7 +222,7 @@ async function startDispatchServer(
   const dispatchServer: DispatchServer = {
     kind: 'dispatch',
     options: fullOptions,
-    server: await startWithPort(fullOptions, app),
+    server: await startWithPort(fullOptions, app), app
   };
   return dispatchServer;
 }
