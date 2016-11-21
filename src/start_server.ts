@@ -25,10 +25,10 @@ import * as send from 'send';
 import * as http from 'spdy';
 import * as url from 'url';
 
-import {openBrowser} from './internal/open_browser';
-import {getPushManifest, pushResources} from './internal/push';
-import {getTLSCertificate} from './internal/tls';
 import {makeApp} from './make_app';
+import {openBrowser} from './util/open_browser';
+import {getPushManifest, pushResources} from './util/push';
+import {getTLSCertificate} from './util/tls';
 
 import findPort = require('find-port');
 
@@ -200,7 +200,8 @@ function getServerUrls(options: ServerOptions) {
 function handleServerReady(options: ServerOptions) {
   const urls = getServerUrls(options);
   console.log(`Files in this directory are available under the following URLs
-    applications: ${url.format(urls.serverUrl)}
+    applications: ${url
+                  .format(urls.serverUrl)}
     reusable components: ${url.format(urls.componentUrl)}`);
   openBrowser(options, urls.serverUrl, urls.componentUrl);
 }
