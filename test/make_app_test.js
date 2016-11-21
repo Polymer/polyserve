@@ -4,7 +4,7 @@ const makeApp = require('../lib/make_app').makeApp;
 const assert = require('chai').assert;
 const supertest = require('supertest');
 
-suite.only('makeApp', () => {
+suite('makeApp', () => {
 
   test('returns an app', () => {
     const app = makeApp({

@@ -10,7 +10,7 @@
 
 import * as babelCore from 'babel-core';
 import {RequestHandler, Request, Response} from 'express';
-import { transformResponse } from './transform-middleware';
+import {transformResponse} from './transform-middleware';
 
 import {UAParser} from 'ua-parser-js';
 import * as parse5 from 'parse5';
@@ -61,10 +61,8 @@ export const babelCompile: RequestHandler = transformResponse({
         for (const scriptTag of scriptTags) {
           try {
             const script = dom5.getTextContent(scriptTag);
-            const compiledScriptResult = babelCore.transform(script, {
-              presets: [babelLatest],
-            });
-            dom5.setTextContent(scriptTag, compiledScriptResult.code);
+            const compiledScriptResult = compileScript(script);
+            dom5.setTextContent(scriptTag, compiledScriptResult);
           } catch (e) {
             // By not setting textContent we keep the original script, which
             // might work. We may want to fail the request so a better error
@@ -76,10 +74,7 @@ export const babelCompile: RequestHandler = transformResponse({
         return parse5.serialize(document);
       } else if (javaScriptMimeTypes.indexOf(contentType) >= 0) {
         try {
-          const compiledScriptResult = babelCore.transform(body, {
-            presets: [babelLatest],
-          });
-          return compiledScriptResult.code;
+          return compileScript(body);
         } catch (e) {
           console.warn(`Error compiling script in ${request.path}: ${e}`);
         }
@@ -88,6 +83,12 @@ export const babelCompile: RequestHandler = transformResponse({
     return body;
   },
 });
+
+function compileScript(script: string): string {
+  return babelCore.transform(script, {
+    presets: [babelLatest],
+  }).code;
+}
 
 const isInlineJavaScript = dom5.predicates.AND(
   dom5.predicates.hasTagName('script'),

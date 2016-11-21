@@ -60,6 +60,7 @@ export function makeApp(options: AppOptions): PolyserveApplication {
 
   const app: PolyserveApplication = <PolyserveApplication>express();
 
+  // TODO(justinfagnani): make configurable with flag
   app.use('*', babelCompile);
 
   app.get('*', (req, res) => {
@@ -88,7 +89,7 @@ export function makeApp(options: AppOptions): PolyserveApplication {
       lastModified: false,
       cacheControl: false,
     });
-    // Uncomment this to disable disable 304s from send() and always compile
+    // Uncomment this to disable 304s from send() and always compile
     // _send.isFresh = () => false;
     _send.pipe(res);
   });
