@@ -34,7 +34,6 @@ import {getTLSCertificate} from './util/tls';
 
 import findPort = require('find-port');
 import opn = require('opn');
-// Cant be an import since httpProxy is not a function, but an object instead
 const httpProxy = require('http-proxy');
 
 export interface ServerOptions {
@@ -77,11 +76,8 @@ export interface ServerOptions {
   /** Path to H2 push-manifest file */
   pushManifestPath?: string;
 
-  /** Path to proxy from */
-  proxyRoot?: string;
-
-  /** Path to proxy to */
-  proxyTarget?: string;
+  /** Proxy to redirect for all matching `path` to `target` */
+  proxy?: {path: string, target: string};
 }
 
 async function applyDefaultOptions(options: ServerOptions):
@@ -305,21 +301,30 @@ export function getApp(options: ServerOptions): express.Express {
 
   app.use('/components/', polyserve);
 
-  if (options.proxyRoot && options.proxyTarget) {
+  if (options.proxy) {
+    if (options.proxy.path === 'components') {
+      console.error('proxy path can not start with components.');
+      return;
+    }
+
+    const proxyPath = options.proxy.path
+                             .replace('*', '\*')
+                             .replace('?', '\?')
+                             .replace('+', '\+');
+
     const apiProxy = httpProxy.createProxyServer();
     const proxyHandler = (req: express.Request, res: express.Response) => {
-      // Remove proxied part from the url
-      req.url = req.url.slice(options.proxyRoot.length + 1);
-      apiProxy.web(req, res, { target: options.proxyTarget }, (error: proxy.ProxyError) => {
+      if (req.url.substring(0, proxyPath.length) === proxyPath) {
+        // Remove proxied part from the url
+        req.url = req.url.slice(proxyPath.length + 1);
+      }
+      apiProxy.web(req, res, { target: options.proxy.target }, (error: proxy.ProxyError) => {
         res.statusCode = error.status || 500;
         res.end(error.message);
       });
     };
 
-    app.post(`/${options.proxyRoot}/*`, proxyHandler);
-    app.get(`/${options.proxyRoot}/*`, proxyHandler);
-    app.put(`/${options.proxyRoot}/*`, proxyHandler);
-    app.delete(`/${options.proxyRoot}/*`, proxyHandler);
+    app.all(`/${proxyPath}/*`, proxyHandler);
   }
 
   app.get('/*', (req, res) => {

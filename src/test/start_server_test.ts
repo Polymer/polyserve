@@ -75,6 +75,32 @@ suite('startServer', () => {
     });
   });
 
+  suite('proxy', () =>  {
+    test('rewrites directory with proxy', (done) => {
+      startServer({
+        root: __dirname
+      }).then((app) => {
+        const proxyAddress = app.address();
+        startServer({
+          root: __dirname,
+          proxy: {
+            path: 'normally-non-existing-path',
+            target: `${proxyAddress.address}:${proxyAddress.port}`
+          }
+        }).then((proxyServer) => {
+          supertest(proxyServer)
+            .get('/normally-non-existing-path/bower_components/test-component/test-file.txt')
+            .expect(200, 'TEST COMPONENT\n')
+            .end(() => {
+              proxyServer.close();
+              app.close();
+              done();
+            });
+        })
+      });
+    });
+  });
+
   suite('h2', () => {
     let _certFile: tmp.SynchrounousResult;
     let _keyFile: tmp.SynchrounousResult;
