@@ -85,11 +85,9 @@ export function makeApp(options: AppOptions): PolyserveApplication {
       }
     }
 
-    const _send = send(req, filePath, {
-      lastModified: false,
-      cacheControl: false,
-    });
-    // Uncomment this to disable 304s from send() and always compile
+    const _send = send(req, filePath);
+    // Uncomment this to disable 304s from send() and always compile. Useful
+    // for working on the compilation middleware.
     // _send.isFresh = () => false;
     _send.pipe(res);
   });
