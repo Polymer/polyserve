@@ -112,12 +112,24 @@ async function _startServer(options: ServerOptions) {
 }
 
 export type ServerInfo = MainlineServer | VariantServer | DispatchServer;
+
+/**
+ * The `default` or `primary` server. If only one ServerInfo is returned from
+ * startServers it must be a MainlineServer. This is the server that's running
+ * with the default configuration and not running a variant configuration.
+ */
 export interface MainlineServer {
   kind: 'mainline';
   server: http.Server;
   app: express.Application;
   options: ServerOptions;
 }
+/**
+ * These are servers which are running some named variant configuration. For
+ * multiple variant dependency directories are detected/configured , there will
+ * be one MainlineServer that serves out the default dependency directory, and
+ * one VariantServer for each other dependency directory.
+ */
 export interface VariantServer {
   kind: 'variant';
   server: http.Server;
@@ -125,6 +137,12 @@ export interface VariantServer {
   options: ServerOptions;
   variantName: string;
 }
+/**
+ * If more than one server is started by startServers, the main port will serve
+ * out a dispatch server. This server serves out an HTML interface that
+ * describes the other servers which have been started, and provides convenience
+ * links to them.
+ */
 export interface DispatchServer {
   kind: 'dispatch';
   server: http.Server;
