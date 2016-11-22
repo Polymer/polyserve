@@ -70,12 +70,11 @@ export async function run(): Promise<void> {
   const serverInfos = await startServers(options);
 
   if (serverInfos.length === 1) {
-    const {serverUrl, componentUrl} =
-        getServerUrls(options, serverInfos[0]!.server);
+    const urls = getServerUrls(options, serverInfos[0]!.server);
     console.log(`Files in this directory are available under the following URLs
     applications: ${
-                  url.format(serverUrl)}
-    reusable components: ${url.format(componentUrl)}
+                  url.format(urls.serverUrl)}
+    reusable components: ${url.format(urls.componentUrl)}
   `)
   } else {
     const dispatchServer = serverInfos.find(s => s.kind === 'dispatch');
@@ -84,10 +83,9 @@ export async function run(): Promise<void> {
           'Internal Error: Launched multiple servers but ' +
           'didn\'t launch a dispatch server.');
     }
-    const {serverUrl} = getServerUrls(options, dispatchServer.server);
+    const urls = getServerUrls(options, dispatchServer.server);
     console.log(`Started multiple servers with different variants:
-    Dispatch server: ${
-      url.format(serverUrl)}`);
+    Dispatch server: ${url.format(urls.serverUrl)}`);
   }
 }
 

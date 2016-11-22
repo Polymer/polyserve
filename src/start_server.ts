@@ -375,8 +375,8 @@ export async function startWithPort(
       reject(err);
     });
   });
-  const {serverUrl, componentUrl} = getServerUrls(options, server);
-  openBrowser(options, serverUrl, componentUrl);
+  const urls = getServerUrls(options, server);
+  openBrowser(options, urls.serverUrl, urls.componentUrl);
 
   return server;
 }
