@@ -20,7 +20,7 @@ import * as http from 'spdy';
 import * as url from 'url';
 
 import {args} from './args';
-import {applyDefaultOptions, getServerUrls, ServerOptions, startServers, startWithPort} from './start_server';
+import {getServerUrls, ServerOptions, startServers, startWithPort} from './start_server';
 
 import commandLineArgs = require('command-line-args');
 import commandLineUsage = require('command-line-usage');

@@ -71,20 +71,20 @@ export interface ServerOptions {
   pushManifestPath?: string;
 }
 
-export async function applyDefaultOptions(options: ServerOptions):
+async function applyDefaultOptions(options: ServerOptions):
     Promise<ServerOptions> {
-  const withDefaults = Object.assign({}, options);
-  Object.assign(withDefaults, {
-    port: await nextOpenPort(options.port),
-    hostname: options.hostname || 'localhost',
-    root: path.resolve(options.root || '.'),
-    certPath: options.certPath || 'cert.pem',
-    keyPath: options.keyPath || 'key.pem',
-  });
-  withDefaults.packageName = options.packageName ||
-      bowerConfig(withDefaults.root).name || path.basename(process.cwd());
-  return withDefaults;
-}
+      const withDefaults = Object.assign({}, options);
+      Object.assign(withDefaults, {
+        port: await nextOpenPort(options.port),
+        hostname: options.hostname || 'localhost',
+        root: path.resolve(options.root || '.'),
+        certPath: options.certPath || 'cert.pem',
+        keyPath: options.keyPath || 'key.pem',
+      });
+      withDefaults.packageName = options.packageName ||
+          bowerConfig(withDefaults.root).name || path.basename(process.cwd());
+      return withDefaults;
+    }
 
 
 /**
@@ -94,8 +94,8 @@ export async function applyDefaultOptions(options: ServerOptions):
  */
 export async function startServer(options: ServerOptions):
     Promise<http.Server> {
-  return (await _startServer(options)).server;
-}
+      return (await _startServer(options)).server;
+    }
 
 async function _startServer(options: ServerOptions) {
   options = options || {};
