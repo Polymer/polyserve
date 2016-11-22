@@ -28,6 +28,7 @@
     "@types/mz": "0.0.29",
     "@types/node": "^4.0.30",
     "@types/opn": "^3.0.28",
+    "@types/parse5": "^2.2.34",
     "@types/serve-static": "^1.7.31",
     "@types/ua-parser-js": "^0.7.30",
     "babel-core": "^6.18.2",
