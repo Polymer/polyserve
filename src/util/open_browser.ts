@@ -13,13 +13,13 @@
  */
 
 import {ServerOptions} from '../start_server';
-import opn = require('opn');
 import * as url from 'url';
+
+import opn = require('opn');
 
 /**
  * Open the given web page URL. If no browser keyword is provided, `opn` will
- * use
- * the user's default browser.
+ * use the user's default browser.
  */
 function openWebPage(url: string, withBrowser?: string) {
   const openOptions = {app: withBrowser};
@@ -34,7 +34,8 @@ function openWebPage(url: string, withBrowser?: string) {
 }
 
 /**
- * Opens a browser
+ * Opens one or more browsers based on the given options and url params.
+ *
  * @param options
  * @param serverUrl
  * @param componentUrl
