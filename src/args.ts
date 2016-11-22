@@ -116,7 +116,7 @@ export let args: ArgDescriptor[] = [
     type: String,
   },
   {
-    name: 'proxy-path',
+    name: 'proxy-target',
     description: 'Host URL to proxy to, for example `https://myredirect:8080/foo`',
     type: String,
   },

@@ -21,6 +21,7 @@ import * as sinon from 'sinon';
 import * as http from 'spdy';
 import * as supertest from 'supertest-as-promised';
 import * as tmp from 'tmp';
+// import * as mocha from 'mocha';
 
 import {getApp, ServerOptions} from '../start_server';
 import {startServer, startServers} from '../start_server';
@@ -76,29 +77,91 @@ suite('startServer', () => {
   });
 
   suite('proxy', () =>  {
-    test('rewrites directory with proxy', (done) => {
-      startServer({
-        root: __dirname
-      }).then((app) => {
-        const proxyAddress = app.address();
-        startServer({
+    let consoleError: (message?: any) => void;
+    let proxyServer: http.Server;
+    let app: http.Server;
+    async function setUpProxy(path: string, f: (proxyServer: http.Server) => void) {
+      app = await startServer({root});
+
+      proxyServer = await startServer({
           root: __dirname,
           proxy: {
-            path: 'normally-non-existing-path',
-            target: `${proxyAddress.address}:${proxyAddress.port}`
+            path: path,
+            target: `http://localhost:${app.address().port}/`
           }
-        }).then((proxyServer) => {
+        })
+      return f(proxyServer);
+    }
+
+    setup(() => {
+      consoleError = console.error;
+    });
+
+    teardown(() => {
+      console.error = consoleError;
+      proxyServer.close();
+      app.close();
+    });
+
+    test('rewrites directory with proxy', () =>
+      setUpProxy('normally-non-existing-path',
+        (proxyServer) =>
           supertest(proxyServer)
             .get('/normally-non-existing-path/bower_components/test-component/test-file.txt')
             .expect(200, 'TEST COMPONENT\n')
-            .end(() => {
-              proxyServer.close();
-              app.close();
-              done();
-            });
-        })
-      });
+      )
+    );
+
+    test('escapes path with regex symbols', () =>
+      setUpProxy('+regex*path?',
+        (proxyServer) =>
+          supertest(proxyServer)
+            .get('/+regex?path*/bower_components/test-component/test-file.txt')
+            .expect(200, 'TEST COMPONENT\n')
+      )
+    );
+
+    test('does not unescape escape symbols in path', () =>
+      setUpProxy('\+regex\?path\*',
+        (proxyServer) =>
+          supertest(proxyServer)
+            .get('/+regex?path*/bower_components/test-component/test-file.txt')
+            .expect(200, 'TEST COMPONENT\n')
+      )
+    );
+
+    test('handles additional slashes at start or end of path', () =>
+      setUpProxy('/api/v1/',
+        (proxyServer) =>
+          supertest(proxyServer)
+            .get('/api/v1/bower_components/test-component/test-file.txt')
+            .expect(200, 'TEST COMPONENT\n')
+      )
+    );
+
+    test('does not set up proxy that starts with components', (done) => {
+      const spy = sinon.spy();
+      console.error = spy;
+      startServer({
+        root: __dirname,
+        proxy: {
+          path: 'components',
+          target: ''
+        }
+      }).then(() => {
+        assert.isTrue(spy.calledOnce);
+        done();
+      })
     });
+
+    test('redirects to root of proxy', () =>
+      setUpProxy('api/v1',
+        (proxyServer) =>
+          supertest(proxyServer)
+            .get('/api/v1/')
+            .expect(200, 'INDEX\n')
+      )
+    );
   });
 
   suite('h2', () => {

@@ -34,7 +34,7 @@ import {getTLSCertificate} from './util/tls';
 
 import findPort = require('find-port');
 import opn = require('opn');
-const httpProxy = require('http-proxy');
+const httpProxy = require('http-proxy-middleware');
 
 export interface ServerOptions {
   /** The root directory to serve **/
@@ -302,32 +302,39 @@ export function getApp(options: ServerOptions): express.Express {
   app.use('/components/', polyserve);
 
   if (options.proxy) {
-    if (options.proxy.path === 'components') {
+    if (options.proxy.path.startsWith('components')) {
       console.error('proxy path can not start with components.');
       return;
     }
 
-    const proxyPath = options.proxy.path
-                             .replace('*', '\*')
-                             .replace('?', '\?')
-                             .replace('+', '\+');
-
-    const apiProxy = httpProxy.createProxyServer();
-    const proxyHandler = (req: express.Request, res: express.Response) => {
-      if (req.url.substring(0, proxyPath.length) === proxyPath) {
-        // Remove proxied part from the url
-        req.url = req.url.slice(proxyPath.length + 1);
+    let escapedPath = '';
+    let escaped = false;
+    for (const char of options.proxy.path) {
+      escaped = (char === '\\') ? !escaped : false;
+      if (!escaped && (char === '*' || char === '+' || char === '?')) {
+        escapedPath += '\\\\';
       }
-      apiProxy.web(req, res, { target: options.proxy.target }, (error: proxy.ProxyError) => {
-        res.statusCode = error.status || 500;
-        res.end(error.message);
-      });
-    };
+      escapedPath += char;
+    }
 
-    app.all(`/${proxyPath}/*`, proxyHandler);
+    if (escapedPath.startsWith('/')) {
+      escapedPath = escapedPath.substring(1);
+    }
+    if (escapedPath.endsWith('/')) {
+      escapedPath = escapedPath.slice(0, -1);
+    }
+    const pathRewrite = {};
+    pathRewrite[`^/${escapedPath}`] = '';
+    const apiProxy = httpProxy(`/${escapedPath}`, {
+      target: options.proxy.target,
+      changeOrigin: true,
+      pathRewrite: pathRewrite
+    });
+    app.use(`/${escapedPath}/`, apiProxy);
   }
 
   app.get('/*', (req, res) => {
+    console.log(port, req.path);
     pushResources(options, req, res);
     const filePath = req.path;
     send(req, filePath, {root: root})
