@@ -47,8 +47,9 @@ function isSuccessful(response: Response) {
 }
 
 export function babelCompile(forceCompile: boolean): RequestHandler {
-  if (forceCompile == null)
+  if (forceCompile == null) {
     forceCompile = false;
+  }
 
   return transformResponse({
     shouldTransform(_request: Request, response: Response) {
