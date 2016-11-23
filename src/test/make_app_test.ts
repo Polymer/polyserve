@@ -14,6 +14,7 @@
 
 import {assert} from 'chai';
 import * as path from 'path';
+import {Response} from 'supertest';
 import * as supertest from 'supertest-as-promised';
 
 import {makeApp} from '../make_app';
@@ -47,12 +48,82 @@ suite('makeApp', () => {
 
   test('shows friendly error when bower.json does not exist', () => {
     let called = false;
-    console.error = function(_e) {
+    console.error = function(_e: any) {
       called = true;
     };
     const app = makeApp({root: path.resolve(__dirname, 'no_bower_json/')});
     assert.isFalse(called);
     assert.equal(app.packageName, 'no_bower_json');
+  });
+
+  suite('compilation', () => {
+
+    const testCompilation = ({url, agent, compile, result}: {
+      url: string,
+      agent?: string,
+      compile: 'always' | 'never' | 'auto',
+      result: 'compiled' | 'uncompiled'
+    }) => async() => {
+      const app = makeApp({
+        root: __dirname,
+        componentDir: path.join(root, 'bower_components'), compile,
+      });
+      let tester = supertest(app).get(url);
+      if (agent) {
+        tester = tester.set('User-Agent', agent)
+      }
+      await tester.expect((res: Response) => {
+        const isCompiled = res.text.indexOf('class A {}') === -1;
+        const shouldCompile = result === 'compiled';
+        if (isCompiled && !shouldCompile) {
+          throw new Error('Source was compiled');
+        } else if (!isCompiled && shouldCompile) {
+          throw new Error('Source was not compiled');
+        }
+      });
+    };
+
+    test('compiles external JS when --compile=always', testCompilation({
+           url: '/test-component/test.js',
+           compile: 'always',
+           result: 'compiled',
+         }));
+
+    test('compiles inline JS when --compile=always', testCompilation({
+           url: '/test-component/test.html',
+           compile: 'always',
+           result: 'compiled',
+         }));
+
+    test('doesn\'t compile external JS when --compile=never', testCompilation({
+           url: '/test-component/test.js',
+           compile: 'never',
+           result: 'uncompiled',
+         }));
+
+    test('doesn\'t compile inline JS when --compile=never', testCompilation({
+           url: '/test-component/test.html',
+           compile: 'never',
+           result: 'uncompiled',
+         }));
+
+    test(
+        'doesn\'t compile external JS when --compile=auto and agent is Chrome',
+        testCompilation({
+          url: '/test-component/test.js',
+          agent:
+              'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_12_1) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/55.0.2883.52 Safari/537.36',
+          compile: 'auto',
+          result: 'uncompiled',
+        }));
+
+    test(
+        'compiles external JS when --compile=auto and agent is unknown',
+        testCompilation({
+          url: '/test-component/test.js',
+          compile: 'auto',
+          result: 'compiled',
+        }));
   });
 
 });
