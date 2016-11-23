@@ -174,9 +174,10 @@ export async function startServers(options: ServerOptions):
 
   const serverAndApp = await _startServer(options);
   return {
+    options,
     kind: 'mainline',
     server: serverAndApp.server,
-    app: serverAndApp.app, options
+    app: serverAndApp.app,
   };
 }
 
