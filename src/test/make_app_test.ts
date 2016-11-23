@@ -14,7 +14,6 @@
 
 import {assert} from 'chai';
 import * as path from 'path';
-import {Response} from 'supertest';
 import * as supertest from 'supertest-as-promised';
 
 import {makeApp} from '../make_app';
@@ -58,29 +57,32 @@ suite('makeApp', () => {
 
   suite('compilation', () => {
 
-    const testCompilation = ({url, agent, compile, result}: {
+    const testCompilation = (options: {
       url: string,
       agent?: string,
       compile: 'always' | 'never' | 'auto',
       result: 'compiled' | 'uncompiled'
     }) => async() => {
+      const url = options.url;
+      const agent = options.agent;
+      const compile = options.compile;
+      const result = options.result;
       const app = makeApp({
-        root: __dirname,
+        root: root,
         componentDir: path.join(root, 'bower_components'), compile,
       });
-      let tester = supertest(app).get(url);
+      let request = supertest(app).get(url);
       if (agent) {
-        tester = tester.set('User-Agent', agent)
+        request = request.set('User-Agent', agent)
       }
-      await tester.expect((res: Response) => {
-        const isCompiled = res.text.indexOf('class A {}') === -1;
-        const shouldCompile = result === 'compiled';
-        if (isCompiled && !shouldCompile) {
-          throw new Error('Source was compiled');
-        } else if (!isCompiled && shouldCompile) {
-          throw new Error('Source was not compiled');
-        }
-      });
+      const response = await request;
+      const isCompiled = response.text.indexOf('class A {}') === -1;
+      const shouldCompile = result === 'compiled';
+      if (isCompiled && !shouldCompile) {
+        throw new Error('Source was compiled');
+      } else if (!isCompiled && shouldCompile) {
+        throw new Error('Source was not compiled');
+      }
     };
 
     test('compiles external JS when --compile=always', testCompilation({
