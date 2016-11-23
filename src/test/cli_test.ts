@@ -17,12 +17,20 @@ import {run as cliRun} from '../cli';
 import intercept = require('intercept-stdout');
 
 suite('cli', () => {
-  // Why not do this setup and teardown in the setup() and teardown() methods?
-  // because you don't want to trap stdout at test end, as that traps mocha's
-  // output.
-  // TODO(rictic): look into using spawn() to run polyserve in another process
-  //     instead. That way we could actually get it started and run it for a
-  //     while, hit it with requests, etc.
+  /**
+   * Runs the CLI with the given args.
+   *
+   * Why not do this setup and teardown in the standard  setup() and teardown()
+   * methods? Because you don't want to trap stdout at test end, as that would
+   * trap mocha's output.
+   *
+   * TODO(rictic): look into using spawn() to run polyserve in another process
+   *     instead. That way we could actually get it started and run it for a
+   *     while, hit it with requests, etc.
+   *
+   * @return A Promise of all STDOUT contents that're written during the
+   *     run() function in cli.ts.
+   */
   async function runCli(args: string[]) {
     const originalArgv = process.argv;
     process.argv = ['node', 'polyserve'].concat(args);
