@@ -294,7 +294,7 @@ suite('startServers', () => {
 
       assert.deepEqual(
           servers.map(s => s.kind).sort(),
-          ['dispatch', 'mainline', 'variant', 'variant'].sort());
+          ['control', 'mainline', 'variant', 'variant'].sort());
 
       const mainlineServer = servers.find(s => s.kind === 'mainline');
       await supertest(mainlineServer.server)
@@ -313,7 +313,7 @@ suite('startServers', () => {
           .get('/components/contents.txt')
           .expect(200, 'bar\n');
 
-      const dispatchServer = servers.find(s => s.kind === 'dispatch');
+      const dispatchServer = servers.find(s => s.kind === 'control');
       const dispatchTester = supertest(dispatchServer.server);
       const apiResponse =
           await dispatchTester.get('/api/serverInfo').expect(200);

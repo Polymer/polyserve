@@ -24,7 +24,6 @@ import {getServerUrls, ServerOptions, startServers, startWithPort} from './start
 
 import commandLineArgs = require('command-line-args');
 import commandLineUsage = require('command-line-usage');
-import {nextOpenPort} from './internal/next_open_port';
 
 
 export async function run(): Promise<void> {
@@ -77,15 +76,15 @@ export async function run(): Promise<void> {
     reusable components: ${url.format(urls.componentUrl)}
   `)
   } else {
-    const dispatchServer = serverInfos.find(s => s.kind === 'dispatch');
-    if (!dispatchServer) {
+    const controlServer = serverInfos.find(s => s.kind === 'control');
+    if (!controlServer) {
       throw new Error(
           'Internal Error: Launched multiple servers but ' +
-          'didn\'t launch a dispatch server.');
+          'didn\'t launch a control server.');
     }
-    const urls = getServerUrls(options, dispatchServer.server);
+    const urls = getServerUrls(options, controlServer.server);
     console.log(`Started multiple servers with different variants:
-    Dispatch server: ${url.format(urls.serverUrl)}`);
+    More info here: ${url.format(urls.serverUrl)}`);
   }
 }
 

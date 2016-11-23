@@ -26,9 +26,8 @@ import * as http from 'spdy';
 import * as url from 'url';
 
 import {bowerConfig} from './bower_config';
-import {nextOpenPort} from './internal/next_open_port';
-
 import {makeApp} from './make_app';
+import {nextOpenPort} from './util/next_open_port';
 import {openBrowser} from './util/open_browser';
 import {getPushManifest, pushResources} from './util/push';
 import {getTLSCertificate} from './util/tls';
@@ -111,7 +110,7 @@ async function _startServer(options: ServerOptions) {
   }
 }
 
-export type ServerInfo = MainlineServer | VariantServer | DispatchServer;
+export type ServerInfo = MainlineServer | VariantServer | ControlServer;
 
 /**
  * The `default` or `primary` server. If only one ServerInfo is returned from
@@ -126,7 +125,7 @@ export interface MainlineServer {
 }
 /**
  * These are servers which are running some named variant configuration. For
- * multiple variant dependency directories are detected/configured , there will
+ * multiple variant dependency directories are detected/configured, there will
  * be one MainlineServer that serves out the default dependency directory, and
  * one VariantServer for each other dependency directory.
  */
@@ -136,15 +135,16 @@ export interface VariantServer {
   app: express.Application;
   options: ServerOptions;
   variantName: string;
+  dependencyDir: string;
 }
 /**
  * If more than one server is started by startServers, the main port will serve
- * out a dispatch server. This server serves out an HTML interface that
+ * out a control server. This server serves out an HTML interface that
  * describes the other servers which have been started, and provides convenience
  * links to them.
  */
-export interface DispatchServer {
-  kind: 'dispatch';
+export interface ControlServer {
+  kind: 'control';
   server: http.Server;
   app: express.Application;
   options: ServerOptions;
@@ -156,18 +156,11 @@ export interface DispatchServer {
  */
 export async function startServers(options: ServerOptions):
     Promise<ServerInfo[]> {
-  const root = options.root || process.cwd();
-  const filesInRoot = await fs.readdir(root);
-  const variantNames = filesInRoot
-                           .map(f => {
-                             const match = f.match(/^bower_components-(.*)/!);
-                             return match && match[1];
-                           })
-                           .filter(f => f != null && f !== '');
+  const variants = await findVariants(options);
   // TODO(rictic): support manually configuring variants? tracking more
   //   metadata about them besides their names?
-  if (variantNames.length > 0) {
-    return await startVariants(options, variantNames);
+  if (variants.length > 0) {
+    return await startVariants(options, variants);
   }
 
   const serverAndApp = await _startServer(options);
@@ -178,7 +171,20 @@ export async function startServers(options: ServerOptions):
   }];
 }
 
-async function startVariants(options: ServerOptions, variantNames: string[]) {
+async function findVariants(options: ServerOptions) {
+  const root = options.root || process.cwd();
+  const filesInRoot = await fs.readdir(root);
+  const variants = filesInRoot
+                       .map(f => {
+                         const match = f.match(/^bower_components-(.*)/!);
+                         return match && {name: match[1], directory: match[0]};
+                       })
+                       .filter(f => f != null && f.name !== '');
+  return variants;
+}
+
+async function startVariants(
+    options: ServerOptions, variants: {name: string, directory: string}[]) {
   const serverInfos: ServerInfo[] = [];
   const mainlineOptions = Object.assign({}, options);
   mainlineOptions.port = 0;
@@ -190,26 +196,27 @@ async function startVariants(options: ServerOptions, variantNames: string[]) {
     options: mainlineOptions,
   });
 
-  for (const variant of variantNames) {
+  for (const variant of variants) {
     const variantOpts = Object.assign({}, options);
     variantOpts.port = 0;
-    variantOpts.componentDir = `bower_components-${variant}`;
+    variantOpts.componentDir = variant.directory;
     const variantServer = await _startServer(variantOpts);
     serverInfos.push({
       kind: 'variant',
-      variantName: variant,
+      variantName: variant.name,
+      dependencyDir: variant.directory,
       server: variantServer.server,
       app: variantServer.app,
       options: variantOpts
     });
   };
 
-  serverInfos.push(await startDispatchServer(options, serverInfos));
+  serverInfos.push(await startControlServer(options, serverInfos));
 
   return serverInfos;
 }
 
-async function startDispatchServer(
+async function startControlServer(
     options: ServerOptions, serverInfos: ServerInfo[]) {
   const fullOptions = await applyDefaultOptions(options);
   const app = express();
@@ -237,12 +244,12 @@ async function startDispatchServer(
     res.send(indexContents);
     res.end();
   });
-  const dispatchServer: DispatchServer = {
-    kind: 'dispatch',
+  const controlServer: ControlServer = {
+    kind: 'control',
     options: fullOptions,
     server: await startWithPort(fullOptions, app), app
   };
-  return dispatchServer;
+  return controlServer;
 }
 
 
