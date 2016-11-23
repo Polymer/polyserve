@@ -76,6 +76,8 @@ export async function run(): Promise<void> {
     reusable components: ${url.format(urls.componentUrl)}
   `)
   } else {
+    // We started multiple servers, just tell the user about the control server,
+    // it serves out human-readable info on how to access the others.
     const urls = getServerUrls(options, serverInfos.control.server);
     console.log(`Started multiple servers with different variants:
     More info here: ${url.format(urls.serverUrl)}`);
