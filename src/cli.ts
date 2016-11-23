@@ -68,7 +68,7 @@ export async function run(): Promise<void> {
 
   const serverInfos = await startServers(options);
 
-  if (serverInfos.length === 1) {
+  if (serverInfos.kind === 'mainline') {
     const urls = getServerUrls(options, serverInfos[0]!.server);
     console.log(`Files in this directory are available under the following URLs
     applications: ${
@@ -76,13 +76,7 @@ export async function run(): Promise<void> {
     reusable components: ${url.format(urls.componentUrl)}
   `)
   } else {
-    const controlServer = serverInfos.find(s => s.kind === 'control');
-    if (!controlServer) {
-      throw new Error(
-          'Internal Error: Launched multiple servers but ' +
-          'didn\'t launch a control server.');
-    }
-    const urls = getServerUrls(options, controlServer.server);
+    const urls = getServerUrls(options, serverInfos.control.server);
     console.log(`Started multiple servers with different variants:
     More info here: ${url.format(urls.serverUrl)}`);
   }

@@ -150,12 +150,21 @@ export interface ControlServer {
   options: ServerOptions;
 }
 
+export interface MultipleServersInfo {
+  kind: 'MultipleServers';
+  mainline: MainlineServer;
+  variants: VariantServer[];
+  control: ControlServer;
+}
+
+export type StartServerResult = MainlineServer | MultipleServersInfo;
+
 /**
  * Starts one or more web servers, based on the given options and
  * variant bower_components directories that are found in the root dir.
  */
 export async function startServers(options: ServerOptions):
-    Promise<ServerInfo[]> {
+    Promise<StartServerResult> {
   const variants = await findVariants(options);
   // TODO(rictic): support manually configuring variants? tracking more
   //   metadata about them besides their names?
@@ -164,11 +173,11 @@ export async function startServers(options: ServerOptions):
   }
 
   const serverAndApp = await _startServer(options);
-  return [{
+  return {
     kind: 'mainline',
     server: serverAndApp.server,
     app: serverAndApp.app, options
-  }];
+  };
 }
 
 async function findVariants(options: ServerOptions) {
@@ -184,46 +193,51 @@ async function findVariants(options: ServerOptions) {
 }
 
 async function startVariants(
-    options: ServerOptions, variants: {name: string, directory: string}[]) {
-  const serverInfos: ServerInfo[] = [];
-  const mainlineOptions = Object.assign({}, options);
-  mainlineOptions.port = 0;
-  const mainServer = await _startServer(mainlineOptions);
-  serverInfos.push({
-    kind: 'mainline',
-    server: mainServer.server,
-    app: mainServer.app,
-    options: mainlineOptions,
-  });
+    options: ServerOptions, variants: {name: string, directory: string}[]):
+    Promise<MultipleServersInfo> {
+      const mainlineOptions = Object.assign({}, options);
+      mainlineOptions.port = 0;
+      const mainServer = await _startServer(mainlineOptions);
+      const mainServerInfo: MainlineServer = {
+        kind: 'mainline',
+        server: mainServer.server,
+        app: mainServer.app,
+        options: mainlineOptions,
+      };
 
-  for (const variant of variants) {
-    const variantOpts = Object.assign({}, options);
-    variantOpts.port = 0;
-    variantOpts.componentDir = variant.directory;
-    const variantServer = await _startServer(variantOpts);
-    serverInfos.push({
-      kind: 'variant',
-      variantName: variant.name,
-      dependencyDir: variant.directory,
-      server: variantServer.server,
-      app: variantServer.app,
-      options: variantOpts
-    });
-  };
+      const variantServerInfos: VariantServer[] = [];
+      for (const variant of variants) {
+        const variantOpts = Object.assign({}, options);
+        variantOpts.port = 0;
+        variantOpts.componentDir = variant.directory;
+        const variantServer = await _startServer(variantOpts);
+        variantServerInfos.push({
+          kind: 'variant',
+          variantName: variant.name,
+          dependencyDir: variant.directory,
+          server: variantServer.server,
+          app: variantServer.app,
+          options: variantOpts
+        });
+      };
 
-  serverInfos.push(await startControlServer(options, serverInfos));
+      const controlServerInfo =
+          await startControlServer(options, mainServerInfo, variantServerInfos);
 
-  return serverInfos;
-}
+      return {
+        kind: 'MultipleServers',
+        control: controlServerInfo,
+        mainline: mainServerInfo,
+        variants: variantServerInfos
+      };
+    }
 
 async function startControlServer(
-    options: ServerOptions, serverInfos: ServerInfo[]) {
+    options: ServerOptions,
+    mainlineInfo: MainlineServer,
+    variantInfos: VariantServer[]) {
   const fullOptions = await applyDefaultOptions(options);
   const app = express();
-  const mainlineInfo =
-      serverInfos.find(s => s.kind === 'mainline') as MainlineServer;
-  const variantInfos =
-      serverInfos.filter(s => s.kind === 'variant') as VariantServer[];
   app.get('/api/serverInfo', (req, res) => {
     res.contentType('json');
     res.send(JSON.stringify({

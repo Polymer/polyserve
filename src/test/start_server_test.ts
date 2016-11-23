@@ -292,28 +292,26 @@ suite('startServers', () => {
     test('serves files out of a given components directory', async() => {
       const servers = await startServers({});
 
-      assert.deepEqual(
-          servers.map(s => s.kind).sort(),
-          ['control', 'mainline', 'variant', 'variant'].sort());
+      if (servers.kind !== 'MultipleServers') {
+        throw new Error('Expected startServers to start multiple servers');
+      }
 
-      const mainlineServer = servers.find(s => s.kind === 'mainline');
+      const mainlineServer = servers.mainline;
       await supertest(mainlineServer.server)
           .get('/components/contents.txt')
           .expect(200, 'mainline\n');
 
-      const fooServer =
-          servers.find(s => s.kind === 'variant' && s.variantName === 'foo');
+      const fooServer = servers.variants.find(s => s.variantName === 'foo');
       await supertest(fooServer.server)
           .get('/components/contents.txt')
           .expect(200, 'foo\n');
 
-      const barServer =
-          servers.find(s => s.kind === 'variant' && s.variantName === 'bar');
+      const barServer = servers.variants.find(s => s.variantName === 'bar');
       await supertest(barServer.server)
           .get('/components/contents.txt')
           .expect(200, 'bar\n');
 
-      const dispatchServer = servers.find(s => s.kind === 'control');
+      const dispatchServer = servers.control;
       const dispatchTester = supertest(dispatchServer.server);
       const apiResponse =
           await dispatchTester.get('/api/serverInfo').expect(200);
