@@ -55,4 +55,26 @@ suite('makeApp', () => {
     assert.equal(app.packageName, 'no_bower_json');
   });
 
+  test('compiles external JS', async() => {
+    const app = makeApp({
+      root: __dirname,
+      componentDir: __dirname + '/bower_components',
+    });
+    const res = await supertest(app).get('/test-component/test.js');
+    if (res.text.indexOf('class A {}') !== -1) {
+      throw new Error('not compiled');
+    }
+  });
+
+  test('compiles inline JS', async() => {
+    const app = makeApp({
+      root: __dirname,
+      componentDir: __dirname + '/bower_components',
+    });
+    const res = await supertest(app).get('/test-component/test.html');
+
+    if (res.text.indexOf('class A {}') !== -1) {
+      throw new Error('not compiled');
+    }
+  });
 });
