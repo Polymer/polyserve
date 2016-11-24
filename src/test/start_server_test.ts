@@ -113,7 +113,7 @@ suite('startServer', () => {
     );
 
     test('escapes path with regex symbols', () =>
-      setUpProxy('+regex*path?',
+      setUpProxy('+regex?path*',
         (proxyServer) =>
           supertest(proxyServer)
             .get('/+regex?path*/bower_components/test-component/test-file.txt')

@@ -22,7 +22,6 @@ import * as send from 'send';
 // TODO: Switch to node-http2 when compatible with express
 // https://github.com/molnarg/node-http2/issues/100
 import * as http from 'spdy';
-import * as proxy from 'http-proxy';
 import * as url from 'url';
 
 import {bowerConfig} from './bower_config';
@@ -32,8 +31,6 @@ import {openBrowser} from './util/open_browser';
 import {getPushManifest, pushResources} from './util/push';
 import {getTLSCertificate} from './util/tls';
 
-import findPort = require('find-port');
-import opn = require('opn');
 const httpProxy = require('http-proxy-middleware');
 
 export interface ServerOptions {
@@ -334,7 +331,6 @@ export function getApp(options: ServerOptions): express.Express {
   }
 
   app.get('/*', (req, res) => {
-    console.log(port, req.path);
     pushResources(options, req, res);
     const filePath = req.path;
     send(req, filePath, {root: root})
