@@ -304,14 +304,12 @@ export function getApp(options: ServerOptions): express.Express {
       return;
     }
 
-    let escapedPath = '';
-    let escaped = false;
-    for (const char of options.proxy.path) {
-      escaped = (char === '\\') ? !escaped : false;
-      if (!escaped && (char === '*' || char === '+' || char === '?')) {
-        escapedPath += '\\\\';
+    let escapedPath = options.proxy.path;
+
+    for (let char of ['*', '?', '+']) {
+      if (escapedPath.indexOf(char) > -1) {
+        console.warn(`Proxy path includes character "${char}" which can cause problems during route matching.`);
       }
-      escapedPath += char;
     }
 
     if (escapedPath.startsWith('/')) {

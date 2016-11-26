@@ -78,90 +78,79 @@ suite('startServer', () => {
 
   suite('proxy', () =>  {
     let consoleError: (message?: any) => void;
+    let consoleWarn: (message?: any) => void;
     let proxyServer: http.Server;
     let app: http.Server;
-    async function setUpProxy(path: string, f: (proxyServer: http.Server) => void) {
+    async function setUpProxy(path: string) {
       app = await startServer({root});
 
-      proxyServer = await startServer({
+      return proxyServer = await startServer({
           root: __dirname,
           proxy: {
             path: path,
             target: `http://localhost:${app.address().port}/`
           }
-        })
-      return f(proxyServer);
+        });
     }
 
     setup(() => {
       consoleError = console.error;
+      consoleWarn = console.warn;
     });
 
     teardown(() => {
       console.error = consoleError;
-      proxyServer.close();
+      console.warn = consoleWarn;
+      proxyServer && proxyServer.close();
       app.close();
     });
 
-    test('rewrites directory with proxy', () =>
-      setUpProxy('normally-non-existing-path',
-        (proxyServer) =>
-          supertest(proxyServer)
-            .get('/normally-non-existing-path/bower_components/test-component/test-file.txt')
-            .expect(200, 'TEST COMPONENT\n')
-      )
-    );
+    test('rewrites directory with proxy', async() => {
+      await setUpProxy('normally-non-existing-path');
+      await supertest(proxyServer)
+        .get('/normally-non-existing-path/bower_components/test-component/test-file.txt')
+        .expect(200, 'TEST COMPONENT\n');
+    });
 
-    test('escapes path with regex symbols', () =>
-      setUpProxy('+regex?path*',
-        (proxyServer) =>
-          supertest(proxyServer)
-            .get('/+regex?path*/bower_components/test-component/test-file.txt')
-            .expect(200, 'TEST COMPONENT\n')
-      )
-    );
+    test('warns when path contains special regex characters', async() => {
+      const spy = sinon.spy();
+      console.warn = spy;
+      app = await startServer({
+        root: __dirname,
+        proxy: {
+          path: '+regex?path*',
+          target: 'target'
+        }
+      });
+      assert.equal(spy.callCount, 3);
+    });
 
-    test('does not unescape escape symbols in path', () =>
-      setUpProxy('\+regex\?path\*',
-        (proxyServer) =>
-          supertest(proxyServer)
-            .get('/+regex?path*/bower_components/test-component/test-file.txt')
-            .expect(200, 'TEST COMPONENT\n')
-      )
-    );
+    test('handles additional slashes at start or end of path', async() => {
+      await setUpProxy('/api/v1/');
+      await supertest(proxyServer)
+        .get('/api/v1/bower_components/test-component/test-file.txt')
+        .expect(200, 'TEST COMPONENT\n');
+    });
 
-    test('handles additional slashes at start or end of path', () =>
-      setUpProxy('/api/v1/',
-        (proxyServer) =>
-          supertest(proxyServer)
-            .get('/api/v1/bower_components/test-component/test-file.txt')
-            .expect(200, 'TEST COMPONENT\n')
-      )
-    );
-
-    test('does not set up proxy that starts with components', (done) => {
+    test('does not set up proxy that starts with components', async () => {
       const spy = sinon.spy();
       console.error = spy;
-      startServer({
+      app = await startServer({
         root: __dirname,
         proxy: {
           path: 'components',
-          target: ''
+          target: 'target'
         }
-      }).then(() => {
-        assert.isTrue(spy.calledOnce);
-        done();
-      })
+      });
+      assert.isTrue(spy.calledOnce);
     });
 
-    test('redirects to root of proxy', () =>
-      setUpProxy('api/v1',
-        (proxyServer) =>
-          supertest(proxyServer)
-            .get('/api/v1/')
-            .expect(200, 'INDEX\n')
-      )
-    );
+    test('redirects to root of proxy', async() => {
+      await setUpProxy('api/v1');
+      await supertest(proxyServer)
+        .get('/api/v1/')
+        .expect(200, 'INDEX\n');
+    });
   });
 
   suite('h2', () => {
