@@ -36,7 +36,7 @@ Navigate to `localhost:8080/components/my-element/demo.html`
   * `-p` The TCP port to use for the web server
   * `-o` Opens your default browser to an initial page, e.g. "demo" or "index.html"
   * `-b <browsername>` use this browser instead of default (ex: 'Google Chrome Canary')
-  * `-H <hostname>` use this hostname instead of localhost
+  * `-H <hostname>` use this hostname instead of 0.0.0.0 (all IP addresses) 
   * `-P <protocol>` The server protocol to use {`h2`, `https/1.1`, `http/1.1`}. **`h2` requires Node 5+.**
   * `-key <path>` Path to TLS certificate private key file for https. Defaults to "key.pem".
   * `-cert <path>` Path to TLS certificate file for https. Defaults to "cert.pem".

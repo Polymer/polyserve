@@ -77,7 +77,7 @@ async function applyDefaultOptions(options: ServerOptions):
       const withDefaults = Object.assign({}, options);
       Object.assign(withDefaults, {
         port: await nextOpenPort(options.port),
-        hostname: options.hostname || 'localhost',
+        hostname: options.hostname || '0.0.0.0',
         root: path.resolve(options.root || '.'),
         certPath: options.certPath || 'cert.pem',
         keyPath: options.keyPath || 'key.pem',
