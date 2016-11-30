@@ -21,7 +21,6 @@ import * as sinon from 'sinon';
 import * as http from 'spdy';
 import * as supertest from 'supertest-as-promised';
 import * as tmp from 'tmp';
-// import * as mocha from 'mocha';
 
 import {getApp, ServerOptions} from '../start_server';
 import {startServer, startServers} from '../start_server';
