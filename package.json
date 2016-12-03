@@ -54,6 +54,7 @@
     "babel-plugin-transform-es2015-typeof-symbol": "^6.18.0",
     "babel-plugin-transform-es2015-unicode-regex": "^6.11.0",
     "babel-plugin-transform-regenerator": "^6.16.1",
+    "chokidar": "^1.6.1",
     "command-line-args": "^3.0.1",
     "command-line-usage": "^3.0.3",
     "content-type": "^1.0.2",
@@ -70,13 +71,15 @@
     "resolve": "^1.0.0",
     "send": "^0.14.1",
     "spdy": "^3.3.3",
-    "ua-parser-js": "^0.7.12"
+    "ua-parser-js": "^0.7.12",
+    "ws": "^1.1.1"
   },
   "devDependencies": {
     "@types/assert": "0.0.29",
     "@types/chai": "^3.4.34",
     "@types/chai-as-promised": "0.0.29",
     "@types/lru-cache": "^2.5.32",
+    "@types/chokidar": "^1.4.29",
     "@types/mocha": "^2.2.33",
     "@types/sinon": "^1.16.31",
     "@types/supertest": "^1.1.31",

@@ -13,6 +13,7 @@
  */
 
 import * as assert from 'assert';
+import {watch as watchFile} from 'chokidar';
 import * as express from 'express';
 import * as fs from 'mz/fs';
 import * as path from 'path';
@@ -21,6 +22,7 @@ import * as send from 'send';
 // https://github.com/molnarg/node-http2/issues/100
 import * as http from 'spdy';
 import * as url from 'url';
+import {Server as WebSocketServer, WebSocket} from 'ws';
 
 import {bowerConfig} from './bower_config';
 import {babelCompile} from './compile-middleware';
@@ -83,6 +85,10 @@ export interface ServerOptions {
   /** An optional list of routes & route handlers to attach to the polyserve
    * app, to be handled before all others */
   additionalRoutes?: Map<string, express.RequestHandler>;
+
+  /** An optional file path to watch for to automatically send websocket
+   * messages to notify connected browsers */
+  liveReloadPath?: string;
 }
 
 function applyDefaultServerOptions(options: ServerOptions) {
@@ -346,6 +352,12 @@ export function getApp(options: ServerOptions): express.Express {
     app.use(`/${escapedPath}/`, apiProxy);
   }
 
+  if (options.liveReloadPath) {
+    app.get('/live-reload.js', (_, res) => {
+      res.sendFile(path.resolve(__dirname, '..', 'static', 'auto-reload.js'));
+    });
+  }
+
   if (options.compile === 'auto' || options.compile === 'always') {
     app.use('*', babelCompile(options.compile === 'always'));
   }
@@ -478,6 +490,23 @@ async function startWithFirstAvailablePort(
 async function tryStartWithPort(
     options: ServerOptions, app: express.Application, port: number) {
   const server = await createServer(app, options);
+
+  if (options.liveReloadPath) {
+    const wss = new WebSocketServer({server: server});
+    wss.on('connection', (ws: WebSocket) => {
+      const watcher = watchFile(options.liveReloadPath);
+      watcher.on('change', () => {
+        ws.send('changed');
+      });
+      ws.on('close', () => {
+        watcher.close();
+      });
+    });
+    server.on('close', () => {
+      wss.close();
+    });
+  }
+
   return new Promise<http.Server|null>((resolve, _reject) => {
     server.listen(port, options.hostname, () => {
       resolve(server);
