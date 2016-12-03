@@ -139,4 +139,9 @@ export let args: ArgDescriptor[] = [
         'Host URL to proxy to, for example `https://myredirect:8080/foo`',
     type: String,
   },
+  {
+    name: 'live-reload-path',
+    description: 'The file path to watch for changes to automatically reload connected browsers.',
+    type: String,
+  },
 ];
