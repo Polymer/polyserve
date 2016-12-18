@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 * Added `-u`/`--component-url` option to support expressing different url to
   fetch components from than `components`.
+* Added `--live-reload-path` option to automatically reload webpages during development.
 
 ### Fixed
 * When no port is given, do a better job of finding an available port.
