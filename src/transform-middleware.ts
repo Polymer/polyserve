@@ -13,6 +13,17 @@
  */
 
 import {Request, RequestHandler, Response} from 'express';
+import {parse as parseContentType} from 'content-type';
+
+export function getContentType(response: Response) {
+  const contentTypeHeader = response.getHeader('Content-Type');
+  return contentTypeHeader && parseContentType(contentTypeHeader).type;
+}
+
+export function isSuccessful(response: Response) {
+  const statusCode = response.statusCode;
+  return (statusCode >= 200 && statusCode < 300);
+}
 
 export function transformResponse(transformer: ResponseTransformer):
     RequestHandler {

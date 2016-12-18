@@ -13,7 +13,7 @@
  */
 
 import * as assert from 'assert';
-import {watch as watchFile} from 'chokidar';
+import {watch} from 'chokidar';
 import * as express from 'express';
 import * as fs from 'mz/fs';
 import * as path from 'path';
@@ -22,10 +22,11 @@ import * as send from 'send';
 // https://github.com/molnarg/node-http2/issues/100
 import * as http from 'spdy';
 import * as url from 'url';
-import {Server as WebSocketServer, WebSocket} from 'ws';
+import {Server as WebSocketServer} from 'ws';
 
 import {bowerConfig} from './bower_config';
 import {babelCompile} from './compile-middleware';
+import {liveReloadAppend} from './live-reload-middleware';
 import {makeApp} from './make_app';
 import {openBrowser} from './util/open_browser';
 import {getPushManifest, pushResources} from './util/push';
@@ -352,17 +353,19 @@ export function getApp(options: ServerOptions): express.Express {
     app.use(`/${escapedPath}/`, apiProxy);
   }
 
-  if (options.liveReloadPath) {
-    app.get('/live-reload.js', (_, res) => {
-      res.sendFile(path.resolve(__dirname, '..', 'static', 'auto-reload.js'));
-    });
-  }
-
   if (options.compile === 'auto' || options.compile === 'always') {
-    app.use('*', babelCompile(options.compile === 'always'));
+    // Compile all files, except index.html
+    app.use(/\/.+/, babelCompile(options.compile === 'always'));
   }
 
   app.use(`/${componentUrl}/`, polyserve);
+
+  if (options.liveReloadPath) {
+    app.get('/_polyserve/live-reload.html', (_, res) => {
+      res.sendFile(path.resolve(__dirname, '..', 'static', 'auto-reload.html'));
+    });
+    app.use('/', liveReloadAppend);
+  }
 
   app.get('/*', (req, res) => {
     pushResources(options, req, res);
@@ -492,18 +495,16 @@ async function tryStartWithPort(
   const server = await createServer(app, options);
 
   if (options.liveReloadPath) {
-    const wss = new WebSocketServer({server: server});
-    wss.on('connection', (ws: WebSocket) => {
-      const watcher = watchFile(options.liveReloadPath);
-      watcher.on('change', () => {
+    const wss = new WebSocketServer({server: server, clientTracking: true});
+    const watcher = watch(path.join(options.root, options.liveReloadPath));
+    watcher.on('change', () => {
+      wss.clients.forEach((ws) => {
         ws.send('changed');
-      });
-      ws.on('close', () => {
-        watcher.close();
       });
     });
     server.on('close', () => {
       wss.close();
+      watcher.close();
     });
   }
 

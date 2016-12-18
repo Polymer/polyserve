@@ -13,14 +13,13 @@
  */
 
 import * as babelCore from 'babel-core';
-import {parse as parseContentType} from 'content-type';
 import * as dom5 from 'dom5';
 import {Request, RequestHandler, Response} from 'express';
 import * as LRU from 'lru-cache';
 import * as parse5 from 'parse5';
 import {UAParser} from 'ua-parser-js';
 
-import {transformResponse} from './transform-middleware';
+import {transformResponse, getContentType, isSuccessful} from './transform-middleware';
 
 const babelTransformers = [
   'babel-plugin-transform-es2015-arrow-functions',
@@ -56,16 +55,6 @@ const htmlMimeType = 'text/html';
 const compileMimeTypes = [
   htmlMimeType,
 ].concat(javaScriptMimeTypes);
-
-function getContentType(response: Response) {
-  const contentTypeHeader = response.getHeader('Content-Type');
-  return contentTypeHeader && parseContentType(contentTypeHeader).type;
-}
-
-function isSuccessful(response: Response) {
-  const statusCode = response.statusCode;
-  return (statusCode >= 200 && statusCode < 300);
-}
 
 // NOTE: To change the max length of the cache at runtime, just use bracket
 // notation, i.e. `babelCompileCache['max'] = 64 * 1024` for 64KB limit.
