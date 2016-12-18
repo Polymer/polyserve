@@ -79,7 +79,7 @@
     "@types/chai": "^3.4.34",
     "@types/chai-as-promised": "0.0.29",
     "@types/lru-cache": "^2.5.32",
-    "@types/chokidar": "^1.4.29",
+    "@types/chokidar": "=1.4.29",
     "@types/mocha": "^2.2.33",
     "@types/sinon": "^1.16.31",
     "@types/supertest": "^1.1.31",
