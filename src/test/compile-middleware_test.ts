@@ -59,10 +59,10 @@ suite('compile-middleware', () => {
     });
 
     test('returns cached html compilation results', async() => {
-      babelCompileCache.set(uncompiledHtml, 'IM IN UR CACHE');
+      babelCompileCache.set(uncompiledHtml, '<html><head></head><body>IM IN UR CACHE</body></html>');
       const response =
           await supertest(app).get('/components/test-component/test.html');
-      assert.equal(response.text, 'IM IN UR CACHE');
+      assert.equal(response.text, '<html><head></head><body>IM IN UR CACHE</body></html>');
     });
 
     test('caches javascript compilation results', async() => {

@@ -27,6 +27,7 @@ import {Server as WebSocketServer} from 'ws';
 import {bowerConfig} from './bower_config';
 import {babelCompile} from './compile-middleware';
 import {liveReloadAppend} from './live-reload-middleware';
+import {transformResponse} from './transform-middleware';
 import {makeApp} from './make_app';
 import {openBrowser} from './util/open_browser';
 import {getPushManifest, pushResources} from './util/push';
@@ -353,19 +354,24 @@ export function getApp(options: ServerOptions): express.Express {
     app.use(`/${escapedPath}/`, apiProxy);
   }
 
-  if (options.compile === 'auto' || options.compile === 'always') {
-    // Compile all files, except index.html
-    app.use(/\/.+/, babelCompile(options.compile === 'always'));
-  }
+  const transformers = [];
 
-  app.use(`/${componentUrl}/`, polyserve);
+  if (options.compile === 'auto' || options.compile === 'always') {
+    transformers.push(babelCompile(options.compile === 'always'));
+  }
 
   if (options.liveReloadPath) {
     app.get('/_polyserve/live-reload.html', (_, res) => {
       res.sendFile(path.resolve(__dirname, '..', 'static', 'auto-reload.html'));
     });
-    app.use('/', liveReloadAppend);
+    transformers.push(liveReloadAppend);
   }
+
+  if (transformers.length) {
+    app.use('*', transformResponse(transformers));
+  }
+
+  app.use(`/${componentUrl}/`, polyserve);
 
   app.get('/*', (req, res) => {
     pushResources(options, req, res);
@@ -496,7 +502,7 @@ async function tryStartWithPort(
 
   if (options.liveReloadPath) {
     const wss = new WebSocketServer({server: server, clientTracking: true});
-    const watcher = watch(path.join(options.root, options.liveReloadPath));
+    const watcher = watch(options.liveReloadPath);
     watcher.on('change', () => {
       wss.clients.forEach((ws) => {
         ws.send('changed');

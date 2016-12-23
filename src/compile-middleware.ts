@@ -13,13 +13,13 @@
  */
 
 import * as babelCore from 'babel-core';
+import {ASTNode, serialize, parse} from 'parse5';
 import * as dom5 from 'dom5';
-import {Request, RequestHandler, Response} from 'express';
+import {Request, Response} from 'express';
 import * as LRU from 'lru-cache';
-import * as parse5 from 'parse5';
 import {UAParser} from 'ua-parser-js';
 
-import {transformResponse, getContentType, isSuccessful} from './transform-middleware';
+import {ResponseTransformer, getContentType, isSuccessful} from './transform-middleware';
 
 const babelTransformers = [
   'babel-plugin-transform-es2015-arrow-functions',
@@ -63,12 +63,12 @@ export const babelCompileCache = LRU<string>(<LRU.Options<string>>{
 });
 
 
-export function babelCompile(forceCompile: boolean): RequestHandler {
+export function babelCompile(forceCompile: boolean): ResponseTransformer {
   if (forceCompile == null) {
     forceCompile = false;
   }
 
-  return transformResponse({
+  return {
     shouldTransform(_request: Request, response: Response) {
       return isSuccessful(response) &&
           compileMimeTypes.indexOf(getContentType(response)) >= 0;
@@ -76,17 +76,12 @@ export function babelCompile(forceCompile: boolean): RequestHandler {
 
     transform(request: Request, response: Response, body: string): string /**/ {
       const contentType = getContentType(response);
-      const uaParser = new UAParser(request.headers['user-agent']);
-      const compile = forceCompile || needCompilation(uaParser);
 
-      if (compile) {
+      if (forceCompile || needCompilation(request)) {
         const source = body;
         const cached = babelCompileCache.get(source);
         if (cached !== undefined) {
           return cached;
-        }
-        if (contentType === htmlMimeType) {
-          body = compileHtml(source, request.path);
         }
         if (javaScriptMimeTypes.indexOf(contentType) !== -1) {
           body = compileScript(source);
@@ -96,11 +91,23 @@ export function babelCompile(forceCompile: boolean): RequestHandler {
 
       return body;
     },
-  });
+
+    transformHTML(request: Request, _response: Response, body: string, document: ASTNode): ASTNode {
+      if (forceCompile || needCompilation(request)) {
+        const cached = babelCompileCache.get(body);
+        if (cached !== undefined) {
+          return parse(cached);
+        }
+        document = compileHtml(document, request.path);
+        babelCompileCache.set(body, serialize(document));
+      }
+
+      return document;
+    }
+  };
 }
 
-function compileHtml(source: string, location: string): string {
-  const document = parse5.parse(source);
+function compileHtml(document: ASTNode, location: string): ASTNode {
   const scriptTags = dom5.queryAll(document, isInlineJavaScript);
   for (const scriptTag of scriptTags) {
     try {
@@ -115,7 +122,7 @@ function compileHtml(source: string, location: string): string {
       console.warn(`Error compiling script in ${location}: ${e.message}`);
     }
   }
-  return parse5.serialize(document);
+  return document;
 }
 
 function compileScript(script: string): string {
@@ -130,7 +137,8 @@ const isInlineJavaScript = dom5.predicates.AND(
     dom5.predicates.hasTagName('script'),
     dom5.predicates.NOT(dom5.predicates.hasAttr('src')));
 
-function needCompilation(uaParser: UAParser): boolean {
+function needCompilation(request: Request): boolean {
+  const uaParser = new UAParser(request.headers['user-agent']);
   const browser = uaParser.getBrowser();
   const versionSplit = browser.version && browser.version.split('.');
   const majorVersion = versionSplit ? parseInt(versionSplit[0], 10) : -1;

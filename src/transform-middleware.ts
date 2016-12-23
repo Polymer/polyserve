@@ -14,6 +14,7 @@
 
 import {Request, RequestHandler, Response} from 'express';
 import {parse as parseContentType} from 'content-type';
+import * as parse5 from 'parse5';
 
 export function getContentType(response: Response) {
   const contentTypeHeader = response.getHeader('Content-Type');
@@ -25,7 +26,7 @@ export function isSuccessful(response: Response) {
   return (statusCode >= 200 && statusCode < 300);
 }
 
-export function transformResponse(transformer: ResponseTransformer):
+export function transformResponse(transformers: ResponseTransformer[]):
     RequestHandler {
   return (req: Request, res: Response, next: () => void) => {
     let ended = false;
@@ -36,7 +37,9 @@ export function transformResponse(transformer: ResponseTransformer):
 
     function shouldTransform() {
       if (_shouldTransform == null) {
-        _shouldTransform = !!transformer.shouldTransform(req, res);
+        _shouldTransform = transformers.reduce((previous, transformer) => {
+          return previous || !!transformer.shouldTransform(req, res);
+        }, false);
       }
       return _shouldTransform;
     }
@@ -75,7 +78,17 @@ export function transformResponse(transformer: ResponseTransformer):
         const body = Buffer.concat(chunks).toString('utf8');
         let newBody = body;
         try {
-          newBody = transformer.transform(req, res, body);
+          if (getContentType(res) === 'text/html') {
+            newBody = parse5.serialize(
+              transformers.reduce((document, transformer) => {
+                return transformer.transformHTML(req, res, body, document);
+              }, parse5.parse(body))
+            );
+          } else {
+            newBody = transformers.reduce((body, transformer) => {
+              return transformer.transform(req, res, body);
+            }, body);
+          }
         } catch (e) {
           console.warn('Error', e);
         }
@@ -102,4 +115,5 @@ export interface ResponseTransformer {
   shouldTransform(request: Request, response: Response): boolean;
 
   transform(request: Request, response: Response, body: string): string;
+  transformHTML(request: Request, response: Response, body: string, document: parse5.ASTNode): parse5.ASTNode;
 }

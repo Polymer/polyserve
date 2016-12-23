@@ -12,28 +12,31 @@
  * http://polymer.github.io/PATENTS.txt
  */
 
-import {Request, RequestHandler, Response} from 'express';
+import {Request, Response} from 'express';
 import * as dom5 from 'dom5';
-import * as parse5 from 'parse5';
+import {ASTNode} from 'parse5';
 
-import {transformResponse, getContentType, isSuccessful} from './transform-middleware';
+import {ResponseTransformer, getContentType, isSuccessful} from './transform-middleware';
 
-export const liveReloadAppend: RequestHandler =
-  transformResponse({
-    shouldTransform(_request: Request, response: Response) {
-      return isSuccessful(response) && getContentType(response) === 'text/html';
-    },
+export const liveReloadAppend: ResponseTransformer = {
+  shouldTransform(_request: Request, response: Response) {
+    return isSuccessful(response) && getContentType(response) === 'text/html';
+  },
 
-    transform(_request: Request, _response: Response, body: string): string {
-      if (!body) {
-        return body;
-      }
-      const document = parse5.parse(body);
-      const head = dom5.query(document, dom5.predicates.hasTagName('head'));
-      const HTMLImport = dom5.constructors.element('link');
-      dom5.setAttribute(HTMLImport, 'rel', 'import');
-      dom5.setAttribute(HTMLImport, 'href', '/_polyserve/live-reload.html');
-      dom5.append(head, HTMLImport);
-      return parse5.serialize(document);
-    },
-  });
+  transform(_request: Request, _response: Response, body: string): string {
+    // Do not transform any other mimeType
+    return body;
+  },
+
+  transformHTML(_request: Request, _response: Response, _body: string, document: ASTNode): ASTNode {
+    const head = dom5.query(document, dom5.predicates.hasTagName('head'));
+    if (!head) {
+      return document;
+    }
+    const HTMLImport = dom5.constructors.element('link');
+    dom5.setAttribute(HTMLImport, 'rel', 'import');
+    dom5.setAttribute(HTMLImport, 'href', '/_polyserve/live-reload.html');
+    dom5.append(head, HTMLImport);
+    return document;
+  },
+};

@@ -12,13 +12,18 @@
  * http://polymer.github.io/PATENTS.txt
  */
 
+import * as chai from 'chai';
+import * as chaiAsPromised from 'chai-as-promised';
 import * as fs from 'mz/fs';
 import * as path from 'path';
 import * as http from 'spdy';
+import * as supertest from 'supertest-as-promised';
 
 import {startServer} from '../start_server';
 
 const WebSocket = require('ws');
+chai.use(chaiAsPromised);
+const assert = chai.assert;
 
 const root = path.join(__dirname, '..', '..', 'test');
 
@@ -32,7 +37,7 @@ suite('live-reload-middleware', () => {
     fs.writeFileSync(changedFilePath, 'Original content');
     app = await startServer({
       root: root,
-      liveReloadPath: 'bower_components'
+      liveReloadPath: path.join(root, 'bower_components/')
     });
   });
 
@@ -51,6 +56,12 @@ suite('live-reload-middleware', () => {
     setTimeout(() => {
       fs.writeFileSync(changedFilePath, 'Changed content');
     }, 100);
+  });
+
+  test('requesting HTML adds HTML import to head', async() => {
+    const response =
+        await supertest(app).get('/components/test-component/test.html');
+    assert.include(response.text, '<link rel="import" href="/_polyserve/live-reload.html"></head>');
   });
 
 });
