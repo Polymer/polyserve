@@ -17,7 +17,8 @@
     "preserveConstEnums": true,
     "suppressImplicitAnyIndexErrors": true,
     "outDir": "lib",
-    "sourceMap": true
+    "sourceMap": true,
+    "skipLibCheck": true
   },
   "include": [
     "custom_typings/**/*.ts",

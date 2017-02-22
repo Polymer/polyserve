@@ -24,6 +24,7 @@ import * as url from 'url';
 
 import {bowerConfig} from './bower_config';
 import {babelCompile} from './compile-middleware';
+import {makeDocsApp} from './docs';
 import {makeApp} from './make_app';
 import {openBrowser} from './util/open_browser';
 import {getPushManifest, pushResources} from './util/push';
@@ -322,6 +323,9 @@ export function getApp(options: ServerOptions): express.Express {
   if (options.compile === 'auto' || options.compile === 'always') {
     app.use('*', babelCompile(options.compile === 'always'));
   }
+
+  const docsApp = makeDocsApp(options);
+  app.use(`/_docs/`, docsApp);
 
   app.use(`/${componentUrl}/`, polyserve);
 
