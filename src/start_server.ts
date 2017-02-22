@@ -316,34 +316,7 @@ export function getApp(options: ServerOptions): express.Express {
   const filePathRegex: RegExp = /.*\/.+\..{1,}$/;
 
   if (options.proxy) {
-    if (options.proxy.path.startsWith(componentUrl)) {
-      console.error(`proxy path can not start with ${componentUrl}.`);
-      return;
-    }
-
-    let escapedPath = options.proxy.path;
-
-    for (let char of ['*', '?', '+']) {
-      if (escapedPath.indexOf(char) > -1) {
-        console.warn(
-            `Proxy path includes character "${char}" which can cause problems during route matching.`);
-      }
-    }
-
-    if (escapedPath.startsWith('/')) {
-      escapedPath = escapedPath.substring(1);
-    }
-    if (escapedPath.endsWith('/')) {
-      escapedPath = escapedPath.slice(0, -1);
-    }
-    const pathRewrite = {};
-    pathRewrite[`^/${escapedPath}`] = '';
-    const apiProxy = httpProxy(`/${escapedPath}`, {
-      target: options.proxy.target,
-      changeOrigin: true,
-      pathRewrite: pathRewrite
-    });
-    app.use(`/${escapedPath}/`, apiProxy);
+    addProxy(app, options);
   }
 
   if (options.compile === 'auto' || options.compile === 'always') {
@@ -369,6 +342,41 @@ export function getApp(options: ServerOptions): express.Express {
   });
   return app;
 }
+
+/**
+ * Adds an API proxy handler.
+ */
+function addProxy(app: any /* Express */, options: ServerOptions) {
+  if (options.proxy.path.startsWith(options.componentUrl)) {
+    console.error(`proxy path can not start with ${options.componentUrl}.`);
+    return;
+  }
+
+  let escapedPath = options.proxy.path;
+
+  for (let char of ['*', '?', '+']) {
+    if (escapedPath.indexOf(char) > -1) {
+      console.warn(
+        `Proxy path includes character "${char}" which can cause problems during route matching.`);
+    }
+  }
+
+  if (escapedPath.startsWith('/')) {
+    escapedPath = escapedPath.substring(1);
+  }
+  if (escapedPath.endsWith('/')) {
+    escapedPath = escapedPath.slice(0, -1);
+  }
+  const pathRewrite = {};
+  pathRewrite[`^/${escapedPath}`] = '';
+  const apiProxy = httpProxy(`/${escapedPath}`, {
+    target: options.proxy.target,
+    changeOrigin: true,
+    pathRewrite: pathRewrite
+  });
+  app.use(`/${escapedPath}/`, apiProxy);
+}
+
 
 /**
  * Determines whether a protocol requires HTTPS
