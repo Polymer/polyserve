@@ -7,7 +7,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## Unreleased
 
-* Add auto-compile support for the Chromium browser.
+* Add auto-compile support for the Chromium  and Opera browsers.
 
 ### Fixed
 * When directory paths don't end in `/`, redirect to the right path, not a
