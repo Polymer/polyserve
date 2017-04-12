@@ -143,16 +143,20 @@ const isInlineJavaScript = dom5.predicates.AND(
 
 export function needCompilation(userAgent: string): boolean {
   const browser = new UAParser(userAgent).getBrowser();
-  const versionSplit = browser.version && browser.version.split('.');
-  const majorVersion = versionSplit ? parseInt(versionSplit[0], 10) : -1;
-  const minorVersion = versionSplit && versionSplit.length > 1 ?
-      parseInt(versionSplit[1], 10) :
-      -1;
+  const versionSplit = (browser.version || '').split('.');
+  const [majorVersion, minorVersion] =
+      versionSplit.map((v) => v ? parseInt(v, 10) : -1);
 
   const supportsES2015 = (browser.name === 'Chrome' && majorVersion >= 49) ||
       (browser.name === 'Chromium' && majorVersion >= 49) ||
       (browser.name === 'OPR' && majorVersion >= 36) ||
       (browser.name === 'Safari' && majorVersion >= 10) ||
+      // Note: The Edge user agent uses the EdgeHTML version, not the main
+      // release version (e.g. EdgeHTML 15 corresponds to Edge 40). See
+      // https://en.wikipedia.org/wiki/Microsoft_Edge#Release_history.
+      //
+      // Versions before 15.15063 may contain a JIT bug affecting ES6
+      // constructors (see #161).
       (browser.name === 'Edge' &&
        (majorVersion > 15 || (majorVersion === 15 && minorVersion >= 15063))) ||
       (browser.name === 'Firefox' && majorVersion >= 51);
