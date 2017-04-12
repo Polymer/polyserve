@@ -87,8 +87,8 @@ export function babelCompile(forceCompile: boolean): RequestHandler {
 
     transform(request: Request, response: Response, body: string): string /**/ {
       const contentType = getContentType(response);
-      const uaParser = new UAParser(request.headers['user-agent']);
-      const compile = forceCompile || needCompilation(uaParser);
+      const compile =
+          forceCompile || needCompilation(request.headers['user-agent']);
 
       if (compile) {
         const source = body;
@@ -141,15 +141,19 @@ const isInlineJavaScript = dom5.predicates.AND(
     dom5.predicates.hasTagName('script'),
     dom5.predicates.NOT(dom5.predicates.hasAttr('src')));
 
-function needCompilation(uaParser: UAParser): boolean {
-  const browser = uaParser.getBrowser();
+export function needCompilation(userAgent: string): boolean {
+  const browser = new UAParser(userAgent).getBrowser();
   const versionSplit = browser.version && browser.version.split('.');
   const majorVersion = versionSplit ? parseInt(versionSplit[0], 10) : -1;
+  const minorVersion = versionSplit && versionSplit.length > 1 ?
+      parseInt(versionSplit[1], 10) :
+      -1;
 
   const supportsES2015 = (browser.name === 'Chrome' && majorVersion >= 49) ||
       (browser.name === 'Chromium' && majorVersion >= 49) ||
       (browser.name === 'Safari' && majorVersion >= 10) ||
-      (browser.name === 'Edge' && majorVersion >= 40) ||
+      (browser.name === 'Edge' &&
+       (majorVersion > 15 || (majorVersion === 15 && minorVersion >= 15063))) ||
       (browser.name === 'Firefox' && majorVersion >= 51);
   return !supportsES2015;
 }
