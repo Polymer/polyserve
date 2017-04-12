@@ -151,6 +151,7 @@ export function needCompilation(userAgent: string): boolean {
 
   const supportsES2015 = (browser.name === 'Chrome' && majorVersion >= 49) ||
       (browser.name === 'Chromium' && majorVersion >= 49) ||
+      (browser.name === 'OPR' && majorVersion >= 36) ||
       (browser.name === 'Safari' && majorVersion >= 10) ||
       (browser.name === 'Edge' &&
        (majorVersion > 15 || (majorVersion === 15 && minorVersion >= 15063))) ||
