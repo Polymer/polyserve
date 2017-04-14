@@ -23,6 +23,7 @@ export function transformResponse(transformer: ResponseTransformer):
 
     let _shouldTransform: boolean = null;
 
+    // Note: this function memoizes its result.
     function shouldTransform() {
       if (_shouldTransform == null) {
         const successful = res.statusCode >= 200 && res.statusCode < 300;

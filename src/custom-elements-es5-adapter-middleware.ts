@@ -19,11 +19,13 @@ import {addCustomElementsEs5Adapter} from 'polymer-build';
 import {browserNeedsCompilation} from './compile-middleware';
 import {transformResponse} from './transform-middleware';
 
-// Returns an express middleware that injects the Custom Elements ES5 Adapter
-// into the entry point when we are serving ES5.
-//
-// This is a *transforming* middleware, so it must be installed before the
-// middleware that actually serves the entry point.
+/**
+ * Returns an express middleware that injects the Custom Elements ES5 Adapter
+ * into the entry point when we are serving ES5.
+ *
+ * This is a *transforming* middleware, so it must be installed before the
+ * middleware that actually serves the entry point.
+ */
 export function injectCustomElementsEs5Adapter(forceCompile: boolean):
     RequestHandler {
   return transformResponse({

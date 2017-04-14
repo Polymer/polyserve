@@ -77,9 +77,9 @@ export function babelCompile(forceCompile: boolean): RequestHandler {
       // polyfills/shims.
       const isPolyfill = url.parse(request.url)
                              .pathname.split('/')
-                             .indexOf('webcomponentsjs') >= 0;
+                             .includes('webcomponentsjs');
       return !isPolyfill &&
-          compileMimeTypes.indexOf(getContentType(response)) >= 0 &&
+          compileMimeTypes.includes(getContentType(response)) &&
           (forceCompile ||
            browserNeedsCompilation(request.headers['user-agent']));
     },
@@ -94,7 +94,7 @@ export function babelCompile(forceCompile: boolean): RequestHandler {
       if (contentType === htmlMimeType) {
         body = compileHtml(source, request.path);
       }
-      if (javaScriptMimeTypes.indexOf(contentType) !== -1) {
+      if (javaScriptMimeTypes.includes(contentType)) {
         body = compileScript(source);
       }
       babelCompileCache.set(source, body);
