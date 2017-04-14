@@ -27,9 +27,10 @@ function openWebPage(url: string, withBrowser?: string) {
   opn(url, openOptions, (err) => {
     if (err) {
       // log error and continue
-      console.error(
-          `ERROR: Problem launching "${openOptions.app || 'default web browser'
-                                                          }".`);
+      console.error(`ERROR: Problem launching "${
+                                                 openOptions.app ||
+                                                 'default web browser'
+                                               }".`);
     }
   });
 }
