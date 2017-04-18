@@ -16,7 +16,7 @@ import * as assert from 'assert';
 import * as express from 'express';
 import * as fs from 'mz/fs';
 import * as path from 'path';
-import {urlFromPath} from 'polymer-build';
+import {urlFromPath} from 'polymer-build/lib/path-transformers';
 import * as send from 'send';
 // TODO: Switch to node-http2 when compatible with express
 // https://github.com/molnarg/node-http2/issues/100
