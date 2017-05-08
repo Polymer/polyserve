@@ -145,6 +145,7 @@ export function browserNeedsCompilation(userAgent: string): boolean {
       (browser.name === 'Chromium' && majorVersion >= 49) ||
       (browser.name === 'OPR' && majorVersion >= 36) ||
       (browser.name === 'Vivaldi' && majorVersion >= 1) ||
+      (browser.name === 'Mobile Safari' && majorVersion >= 10) ||
       (browser.name === 'Safari' && majorVersion >= 10) ||
       // Note: The Edge user agent uses the EdgeHTML version, not the main
       // release version (e.g. EdgeHTML 15 corresponds to Edge 40). See
