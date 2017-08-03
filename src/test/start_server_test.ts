@@ -323,11 +323,17 @@ suite('startServer', () => {
       _teardownStubServer();
     });
 
+    /*
+     * TODO(fks): chai-as-promised expected a special promise-a-plus type,
+     * instead of the standard Node Promise type. Cast to any for now, remove
+     * once fixed in DefinitelyTyped.
+     */
     test('rejects unsupported Node version (< 5) only', function() {
       if (_nodeVersion < 5) {
-        return assert.isRejected(startServer(_serverOptions));
+        return assert.isRejected(<any>startServer(_serverOptions));
       } else {
-        return assert.becomes(_startStubServer(_serverOptions), _stubServer);
+        return assert.becomes(
+            <any>_startStubServer(_serverOptions), _stubServer);
       }
     });
 
