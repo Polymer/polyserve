@@ -22,7 +22,17 @@ import * as parse5 from 'parse5';
 
 import {transformResponse} from './transform-middleware';
 
-const babelTransformers = [
+const p = dom5.predicates;
+
+const isJsScriptNode = p.AND(
+    p.hasTagName('script'),
+    p.OR(
+        p.NOT(p.hasAttr('type')),
+        p.hasAttrValue('type', 'text/javascript'),
+        p.hasAttrValue('type', 'application/javascript'),
+        p.hasAttrValue('type', 'module')));
+
+const es2015Plugins = [
   'babel-plugin-transform-es2015-arrow-functions',
   'babel-plugin-transform-es2015-block-scoped-functions',
   'babel-plugin-transform-es2015-block-scoping',
@@ -44,6 +54,10 @@ const babelTransformers = [
   'babel-plugin-transform-regenerator',
 ].map((name) => require(name));
 
+const modulesPlugins = [
+  'babel-plugin-transform-es2015-modules-amd',
+].map((name) => require(name));
+
 const javaScriptMimeTypes = [
   'application/javascript',
   'application/ecmascript',
@@ -55,7 +69,13 @@ const htmlMimeType = 'text/html';
 
 const compileMimeTypes = [
   htmlMimeType,
-].concat(javaScriptMimeTypes);
+  ...javaScriptMimeTypes,
+];
+
+interface compileOptions {
+  transformES2015: boolean;
+  transformModules: boolean;
+}
 
 // Match the polyfills from https://github.com/webcomponents/webcomponentsjs,
 // but not their tests.
@@ -72,7 +92,6 @@ export const babelCompileCache = LRU<string>(<LRU.Options<string>>{
   length: (n: string, key: string) => n.length + key.length
 });
 
-
 export function babelCompile(forceCompile: boolean): RequestHandler {
   return transformResponse({
     shouldTransform(request: Request, response: Response) {
@@ -84,56 +103,119 @@ export function babelCompile(forceCompile: boolean): RequestHandler {
     },
 
     transform(request: Request, response: Response, body: string): string {
-      const contentType = getContentType(response);
-      const source = body;
-      const cached = babelCompileCache.get(source);
+      const cached = babelCompileCache.get(body);
       if (cached !== undefined) {
         return cached;
       }
-      if (contentType === htmlMimeType) {
-        body = compileHtml(source, request.path);
-      }
-      if (javaScriptMimeTypes.includes(contentType)) {
-        body = compileScript(source);
-      }
-      babelCompileCache.set(source, body);
 
-      return body;
+      const capabilities = browserCapabilities(request.get('user-agent'));
+      const options = {
+        transformES2015: forceCompile || !capabilities.has('es2015'),
+        transformModules: forceCompile || !capabilities.has('modules'),
+      };
+
+      let transformed;
+      const contentType = getContentType(response);
+      if (contentType === htmlMimeType) {
+        transformed = compileHtml(body, request.path, options);
+      } else if (javaScriptMimeTypes.includes(contentType)) {
+        transformed = compileScript(body, options);
+      } else {
+        transformed = body;
+      }
+      babelCompileCache.set(body, transformed);
+      return transformed;
     },
   });
 }
 
-function compileHtml(source: string, location: string): string {
+function compileHtml(
+    source: string, location: string, options: compileOptions): string {
   const document = parse5.parse(source);
-  const scriptTags = dom5.queryAll(document, isInlineJavaScript);
-  for (const scriptTag of scriptTags) {
-    try {
-      const script = dom5.getTextContent(scriptTag);
-      const compiledScriptResult = compileScript(script);
-      dom5.setTextContent(scriptTag, compiledScriptResult);
-    } catch (e) {
-      // By not setting textContent we keep the original script, which
-      // might work. We may want to fail the request so a better error
-      // shows up in the network panel of dev tools. If this is the main
-      // page we could also render a message in the browser.
-      console.warn(`Error compiling script in ${location}: ${e.message}`);
+  let injectedRequireJS = false;
+
+  for (const scriptTag of dom5.queryAll(document, isJsScriptNode)) {
+    // Is this a module script we should transform?
+    const transformingModule = options.transformModules &&
+        dom5.getAttribute(scriptTag, 'type') === 'module';
+
+    if (transformingModule && !injectedRequireJS) {
+      // We need RequireJS to load the AMD modules we are declaring. Inject the
+      // dependency as late as possible (right before the first module is
+      // declared) because some of our legacy non-module dependencies,
+      // typically loaded in <head>, behave differently when window.require is
+      // present.
+      dom5.insertBefore(
+          scriptTag.parentNode,
+          scriptTag,
+          parse5.parseFragment(
+              '<script src="/components/requirejs/require.js"></script>\n'));
+      injectedRequireJS = true;
+    }
+
+    const src = dom5.getAttribute(scriptTag, 'src');
+    const isInline = !src;
+
+    if (transformingModule && !isInline) {
+      // Transform an external module script into a `require` for that module,
+      // to be executed immediately.
+      dom5.replace(
+          scriptTag,
+          parse5.parseFragment(`<script>require(["${src}"]);</script>\n`));
+
+    } else if (isInline) {
+      const plugins = [];
+      if (options.transformES2015) {
+        plugins.push(...es2015Plugins);
+      }
+      if (transformingModule) {
+        plugins.push(...modulesPlugins);
+      }
+
+      const js = dom5.getTextContent(scriptTag);
+      let compiled;
+      try {
+        compiled = babelCore.transform(js, {plugins}).code;
+      } catch (e) {
+        // By not setting textContent we keep the original script, which might
+        // work. We may want to fail the request so a better error shows up in
+        // the network panel of dev tools. If this is the main page we could
+        // also render a message in the browser.
+        console.warn(`Error compiling script in ${location}: ${e.message}`);
+        continue;
+      }
+
+      if (transformingModule) {
+        // The Babel AMD transformer output always starts with a `define` call,
+        // which registers a module but does not execute it immediately. Since
+        // we're in HTML, these are our top-level scripts, and we want them to
+        // execute immediately. Swap it out for `require` so that it does.
+        compiled = compiled.replace('define', 'require');
+
+        // Remove type="module" since this is non-module JavaScript now.
+        dom5.removeAttribute(scriptTag, 'type');
+      }
+
+      dom5.setTextContent(scriptTag, compiled);
     }
   }
+
   return parse5.serialize(document);
 }
 
-function compileScript(script: string): string {
-  return babelCore
-      .transform(script, {
-        plugins: babelTransformers,
-      })
-      .code;
+function compileScript(source: string, options: compileOptions): string {
+  const plugins = [];
+  if (options.transformES2015) {
+    plugins.push(...es2015Plugins);
+  }
+  if (options.transformModules && source.includes('ISMODULE')) {
+    // TODO A smarter way to tell if we're a module.
+    plugins.push(...modulesPlugins);
+  }
+  return babelCore.transform(source, {plugins}).code;
 }
 
-const isInlineJavaScript = dom5.predicates.AND(
-    dom5.predicates.hasTagName('script'),
-    dom5.predicates.NOT(dom5.predicates.hasAttr('src')));
-
 export function browserNeedsCompilation(userAgent: string): boolean {
-  return !browserCapabilities(userAgent).has('es2015');
+  const capabilities = browserCapabilities(userAgent);
+  return !capabilities.has('es2015') || !capabilities.has('modules');
 }
