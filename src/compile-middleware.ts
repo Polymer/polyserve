@@ -134,6 +134,7 @@ function compileHtml(
     source: string, location: string, options: compileOptions): string {
   const document = parse5.parse(source);
   let injectedRequireJS = false;
+  let wctScriptTag;
 
   for (const scriptTag of dom5.queryAll(document, isJsScriptNode)) {
     // Is this a module script we should transform?
@@ -157,23 +158,32 @@ function compileHtml(
     const src = dom5.getAttribute(scriptTag, 'src');
     const isInline = !src;
 
+    if (src && src.includes('web-component-tester/browser.js')) {
+      wctScriptTag = scriptTag;
+    }
+
     if (transformingModule && !isInline) {
       // Transform an external module script into a `require` for that module,
       // to be executed immediately.
       dom5.replace(
-          scriptTag,
-          parse5.parseFragment(`<script>require(["${src}"]);</script>\n`));
+          scriptTag, parse5.parseFragment(`
+<script>
+  _incrementModule();
+  require(["${src}"], _decrementModule);
+</script>
+`));
 
     } else if (isInline) {
+      let js = dom5.getTextContent(scriptTag);
       const plugins = [];
       if (options.transformES2015) {
         plugins.push(...es2015Plugins);
       }
       if (transformingModule) {
         plugins.push(...modulesPlugins);
+        js += '\_decrementModule();';
       }
 
-      const js = dom5.getTextContent(scriptTag);
       let compiled;
       try {
         compiled = babelCore.transform(js, {plugins}).code;
@@ -193,12 +203,48 @@ function compileHtml(
         // execute immediately. Swap it out for `require` so that it does.
         compiled = compiled.replace('define', 'require');
 
+        compiled = '_incrementModule();\n' + compiled;
+
         // Remove type="module" since this is non-module JavaScript now.
         dom5.removeAttribute(scriptTag, 'type');
       }
 
       dom5.setTextContent(scriptTag, compiled);
     }
+  }
+
+  if (injectedRequireJS && wctScriptTag) {
+    // Converting a module to RequireJS means that it does not execute
+    // synchronously like a native module would. Since Web Component Tester
+    // listens for the `DOMContentLoaded` event, this means test suites in
+    // modules will not have been registered by the time WCT starts running
+    // tests.
+    //
+    // To address this, we inject this block of JS which uses WCT's `waitFor`
+    // hook to defer running tests until all the modules we've converted have
+    // executed (see the _increment and _decrementModule calls injected above).
+    //
+    // It's important we inject this as late as possible before the WCT script,
+    // because users may have already set their own `waitFor` function that we
+    // must call instead of clobbering.
+    dom5.insertBefore(
+        wctScriptTag.parentNode, wctScriptTag, parse5.parseFragment(`
+<script>
+  (function() {
+    var cb;
+    var numModules = 0
+    window.WCT = window.WCT || {};
+    var oldWaitFor = window.WCT.waitFor;
+    window.WCT.waitFor = function(_cb) { cb = _cb; };
+    window._incrementModule = function() { numModules++; };
+    window._decrementModule = function() {
+      if (!--numModules) {
+        if (oldWaitFor) { oldWaitFor(cb); }
+        else { cb(); }
+      }
+    };
+  }());
+</script>`));
   }
 
   return parse5.serialize(document);
