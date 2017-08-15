@@ -13,6 +13,7 @@
  */
 
 import * as babelCore from 'babel-core';
+import * as babylon from 'babylon';
 import {browserCapabilities} from 'browser-capabilities';
 import {parse as parseContentType} from 'content-type';
 import * as dom5 from 'dom5';
@@ -208,11 +209,29 @@ function compileScript(source: string, options: compileOptions): string {
   if (options.transformES2015) {
     plugins.push(...es2015Plugins);
   }
-  if (options.transformModules && source.includes('ISMODULE')) {
-    // TODO A smarter way to tell if we're a module.
+  if (options.transformModules && hasImportOrExport(source)) {
     plugins.push(...modulesPlugins);
   }
   return babelCore.transform(source, {plugins}).code;
+}
+
+function hasImportOrExport(js: string): boolean {
+  let ast;
+  try {
+    ast = babylon.parse(js, {sourceType: 'module'});
+  } catch (e) {
+    return false;
+  }
+  for (const node of ast.program.body) {
+    switch (node.type) {
+      case 'ImportDeclaration':
+      case 'ExportNamedDeclaration':
+      case 'ExportDefaultDeclaration':
+      case 'ExportAllDeclaration':
+        return true;
+    }
+  }
+  return false;
 }
 
 export function browserNeedsCompilation(userAgent: string): boolean {
