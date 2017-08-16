@@ -202,20 +202,24 @@ function compileHtml(
   }
 
   if (wctScriptTag && requireScriptTag) {
-    // This looks like a Web Component Tester script, and we have converted
-    // ES modules to AMD. Converting a module to AMD means that it will not
-    // execute synchronously like an ES module would. Since WCT listens for the
-    // `DOMContentLoaded` event, this means test suites in modules will not
-    // have been registered by the time WCT starts running tests.
+    // This looks like a Web Component Tester script, and we have converted ES
+    // modules to AMD. Converting a module to AMD means that `DOMContentLoaded`
+    // will fire before RequireJS resolves and executes the modules. Since WCT
+    // listens for `DOMContentLoaded`, this means test suites in modules will
+    // not have been registered by the time WCT starts running tests.
     //
     // To address this, we inject a block of JS that uses WCT's `waitFor` hook
-    // to defer running tests until our AMD modules have loaded. Do this as
-    // late as possible, before the WCT script, because users may be setting
-    // their own `waitFor` that musn't clobber ours. Likewise we must call
-    // theirs if we find it.
+    // to defer running tests until our AMD modules have loaded. If WCT finds a
+    // `waitFor`, it passes it a callback that will run the tests, instead of
+    // running tests immediately.
+    //
+    // Note we must do this as late as possible, before the WCT script, because
+    // users may be setting their own `waitFor` that musn't clobber ours.
+    // Likewise we must call theirs if we find it.
     dom5.insertBefore(
         wctScriptTag.parentNode, wctScriptTag, parse5.parseFragment(`
 <script>
+  // Injected by Polyserve.
   (function() {
     window.WCT = window.WCT || {};
     var originalWaitFor = window.WCT.waitFor;
@@ -236,9 +240,14 @@ function compileHtml(
     // assumes that all modules are registered before `DOMContentLoaded`, but
     // that's an assumption WCT normally makes anyway. Do this right after
     // RequireJS is loaded, and hence before the first module is registered.
+    //
+    // TODO We may want to detect when the module failed to load (e.g. the deps
+    // couldn't be resolved, or the factory threw an exception) and show a nice
+    // message. For now test running will just hang if any module fails.
     dom5.insertAfter(
         requireScriptTag.parentNode, requireScriptTag, parse5.parseFragment(`
 <script>
+  // Injected by Polyserve.
   (function() {
     var originalRequire = window.require;
     var moduleCount = 0;
