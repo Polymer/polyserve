@@ -1,4 +1,5 @@
 <!DOCTYPE html><html><head>
+  <script src="before.js"></script>
   
 <script>
   (function() {
@@ -16,6 +17,7 @@
   }());
 </script>
 <script src="../../web-component-tester/browser.js"></script>
+  <script src="after.js"></script>
 </head>
 
 <body>
@@ -39,12 +41,21 @@
   })();
 </script>
 
-<script>require(['lib.js'], function (_lib) {
+<script>require(['lib-module.js'], function (_libModule) {
     'use strict';
+
+    doSomething(_libModule.foo);
 });</script>
 
-  <script>require(["external.js"]);</script>
+  <script>require(['lib-module.js'], function (_libModule) {
+    'use strict';
 
+    doSomethingElse(_libModule.foo);
+});</script>
+
+  <script>inlineNotModuleStuff();<script>
+
+  <script src="external.js" type="module"></script>
 
 
 </body></html>
