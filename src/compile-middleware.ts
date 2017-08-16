@@ -93,7 +93,8 @@ export const babelCompileCache = LRU<string>(<LRU.Options<string>>{
   length: (n: string, key: string) => n.length + key.length
 });
 
-export function babelCompile(forceCompile: boolean): RequestHandler {
+export function babelCompile(
+    forceCompile: boolean, componentUrl: string): RequestHandler {
   return transformResponse({
     shouldTransform(request: Request, response: Response) {
       // We must never compile the Custom Elements ES5 Adapter or other
@@ -118,7 +119,7 @@ export function babelCompile(forceCompile: boolean): RequestHandler {
       let transformed;
       const contentType = getContentType(response);
       if (contentType === htmlMimeType) {
-        transformed = compileHtml(body, request.path, options);
+        transformed = compileHtml(body, request.path, componentUrl, options);
       } else if (javaScriptMimeTypes.includes(contentType)) {
         transformed = compileScript(body, options);
       } else {
@@ -131,7 +132,10 @@ export function babelCompile(forceCompile: boolean): RequestHandler {
 }
 
 function compileHtml(
-    source: string, location: string, options: CompileOptions): string {
+    source: string,
+    location: string,
+    componentUrl: string,
+    options: CompileOptions): string {
   const document = parse5.parse(source);
   let requireScriptTag, wctScriptTag;
 
@@ -147,7 +151,7 @@ function compileHtml(
       // typically loaded in <head>, behave differently when window.require is
       // present.
       const fragment = parse5.parseFragment(
-          '<script src="/components/requirejs/require.js"></script>\n');
+          `<script src="/${componentUrl}/requirejs/require.js"></script>\n`);
       requireScriptTag = fragment.childNodes[0];
       dom5.insertBefore(scriptTag.parentNode, scriptTag, fragment);
     }
