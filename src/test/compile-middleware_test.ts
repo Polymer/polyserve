@@ -32,10 +32,9 @@ const userAgentsThatDontSupportES2015 = [
   'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/52.0.2743.116 Safari/537.36 Edge/15.14986',
 ];
 
-const userAgentsThatSupportES2015 = [
-  'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_12_3) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/57.0.2987.98 Safari/537.36',
-  'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/52.0.2743.116 Safari/537.36 Edge/15.15063',
-  'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/52.0.2743.116 Safari/537.36 Edge/16.00000',
+const userAgentsThatSupportES2015AndModules = [
+  'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_12_6) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/61.0.3163.39 Safari/537.36',
+  'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_12_6) AppleWebKit/603.3.8 (KHTML, like Gecko) Version/10.1.2 Safari/603.3.8',
 ];
 
 suite('compile-middleware', () => {
@@ -137,7 +136,7 @@ suite('compile-middleware', () => {
 
       test('detect user-agents that do not need compilation', async () => {
         assert.isFalse(babelCompileCache.has(`Unexpected .js file in cache`));
-        for (const userAgent of userAgentsThatSupportES2015) {
+        for (const userAgent of userAgentsThatSupportES2015AndModules) {
           const response = await supertest(app)
                                .get('/components/test-component/test.js')
                                .set('User-Agent', userAgent);
@@ -175,7 +174,7 @@ suite('compile-middleware', () => {
     for (const userAgent of userAgentsThatDontSupportES2015) {
       assert.equal(browserNeedsCompilation(userAgent), true, userAgent);
     }
-    for (const userAgent of userAgentsThatSupportES2015) {
+    for (const userAgent of userAgentsThatSupportES2015AndModules) {
       assert.equal(browserNeedsCompilation(userAgent), false, userAgent);
     }
   });

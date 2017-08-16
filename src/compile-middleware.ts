@@ -73,7 +73,7 @@ const compileMimeTypes = [
   ...javaScriptMimeTypes,
 ];
 
-interface compileOptions {
+interface CompileOptions {
   transformES2015: boolean;
   transformModules: boolean;
 }
@@ -131,7 +131,7 @@ export function babelCompile(forceCompile: boolean): RequestHandler {
 }
 
 function compileHtml(
-    source: string, location: string, options: compileOptions): string {
+    source: string, location: string, options: CompileOptions): string {
   const document = parse5.parse(source);
   let requireScriptTag, wctScriptTag;
 
@@ -262,7 +262,7 @@ function compileHtml(
   return parse5.serialize(document);
 }
 
-function compileScript(source: string, options: compileOptions): string {
+function compileScript(source: string, options: CompileOptions): string {
   const plugins = [];
   if (options.transformES2015) {
     plugins.push(...es2015Plugins);
