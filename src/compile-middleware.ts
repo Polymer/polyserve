@@ -133,26 +133,23 @@ export function babelCompile(forceCompile: boolean): RequestHandler {
 function compileHtml(
     source: string, location: string, options: compileOptions): string {
   const document = parse5.parse(source);
-  let injectedRequireJS = false;
-  let wctScriptTag;
+  let requireScriptTag, wctScriptTag;
 
   for (const scriptTag of dom5.queryAll(document, isJsScriptNode)) {
     // Is this a module script we should transform?
     const transformingModule = options.transformModules &&
         dom5.getAttribute(scriptTag, 'type') === 'module';
 
-    if (transformingModule && !injectedRequireJS) {
+    if (transformingModule && !requireScriptTag) {
       // We need RequireJS to load the AMD modules we are declaring. Inject the
       // dependency as late as possible (right before the first module is
       // declared) because some of our legacy non-module dependencies,
       // typically loaded in <head>, behave differently when window.require is
       // present.
-      dom5.insertBefore(
-          scriptTag.parentNode,
-          scriptTag,
-          parse5.parseFragment(
-              '<script src="/components/requirejs/require.js"></script>\n'));
-      injectedRequireJS = true;
+      const fragment = parse5.parseFragment(
+          '<script src="/components/requirejs/require.js"></script>\n');
+      requireScriptTag = fragment.childNodes[0];
+      dom5.insertBefore(scriptTag.parentNode, scriptTag, fragment);
     }
 
     const src = dom5.getAttribute(scriptTag, 'src');
@@ -166,12 +163,8 @@ function compileHtml(
       // Transform an external module script into a `require` for that module,
       // to be executed immediately.
       dom5.replace(
-          scriptTag, parse5.parseFragment(`
-<script>
-  _incrementModule();
-  require(["${src}"], _decrementModule);
-</script>
-`));
+          scriptTag,
+          parse5.parseFragment(`<script>require(["${src}"]);</script>\n`));
 
     } else if (isInline) {
       let js = dom5.getTextContent(scriptTag);
@@ -181,7 +174,6 @@ function compileHtml(
       }
       if (transformingModule) {
         plugins.push(...modulesPlugins);
-        js += '\_decrementModule();';
       }
 
       let compiled;
@@ -203,8 +195,6 @@ function compileHtml(
         // execute immediately. Swap it out for `require` so that it does.
         compiled = compiled.replace('define', 'require');
 
-        compiled = '_incrementModule();\n' + compiled;
-
         // Remove type="module" since this is non-module JavaScript now.
         dom5.removeAttribute(scriptTag, 'type');
       }
@@ -213,38 +203,62 @@ function compileHtml(
     }
   }
 
-  if (injectedRequireJS && wctScriptTag) {
-    // Converting a module to RequireJS means that it does not execute
-    // synchronously like a native module would. Since Web Component Tester
-    // listens for the `DOMContentLoaded` event, this means test suites in
-    // modules will not have been registered by the time WCT starts running
-    // tests.
+  if (wctScriptTag && requireScriptTag) {
+    // This looks like a Web Component Tester script, and we have converted
+    // ES modules to AMD. Converting a module to AMD means that it will not
+    // execute synchronously like an ES module would. Since WCT listens for the
+    // `DOMContentLoaded` event, this means test suites in modules will not
+    // have been registered by the time WCT starts running tests.
     //
-    // To address this, we inject this block of JS which uses WCT's `waitFor`
-    // hook to defer running tests until all the modules we've converted have
-    // executed (see the _increment and _decrementModule calls injected above).
-    //
-    // It's important we inject this as late as possible before the WCT script,
-    // because users may have already set their own `waitFor` function that we
-    // must call instead of clobbering.
+    // To address this, we inject a block of JS that uses WCT's `waitFor` hook
+    // to defer running tests until our AMD modules have loaded. Do this as
+    // late as possible, before the WCT script, because users may be setting
+    // their own `waitFor` that musn't clobber ours. Likewise we must call
+    // theirs if we find it.
     dom5.insertBefore(
         wctScriptTag.parentNode, wctScriptTag, parse5.parseFragment(`
 <script>
   (function() {
-    var cb;
-    var numModules = 0
     window.WCT = window.WCT || {};
-    var oldWaitFor = window.WCT.waitFor;
-    window.WCT.waitFor = function(_cb) { cb = _cb; };
-    window._incrementModule = function() { numModules++; };
-    window._decrementModule = function() {
-      if (!--numModules) {
-        if (oldWaitFor) { oldWaitFor(cb); }
-        else { cb(); }
-      }
+    var originalWaitFor = window.WCT.waitFor;
+    window.WCT.waitFor = function(cb) {
+      window._wctCallback = function() {
+        if (originalWaitFor) {
+          originalWaitFor(cb);
+        } else {
+          cb();
+        }
+      };
     };
   }());
-</script>`));
+</script>
+`));
+
+    // Monkey patch `require` to keep track of loaded AMD modules. Note this
+    // assumes that all modules are registered before `DOMContentLoaded`, but
+    // that's an assumption WCT normally makes anyway. Do this right after
+    // RequireJS is loaded, and hence before the first module is registered.
+    dom5.insertAfter(
+        requireScriptTag.parentNode, requireScriptTag, parse5.parseFragment(`
+<script>
+  (function() {
+    var originalRequire = window.require;
+    var moduleCount = 0;
+    window.require = function(deps, factory) {
+      moduleCount++;
+      originalRequire(deps, function(...args) {
+        if (factory) {
+          factory(...args);
+        }
+        moduleCount--;
+        if (moduleCount === 0) {
+          window._wctCallback();
+        }
+      });
+    };
+  })();
+</script>
+`));
   }
 
   return parse5.serialize(document);
