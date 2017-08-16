@@ -230,5 +230,12 @@ suite('compile-middleware', () => {
     test('transforms non-module-looking JS', async () => {
       await assertGolden('lib-no-module.js');
     });
+
+    test('serves RequireJS library', async () => {
+      const response =
+          await supertest(app).get('/components/requirejs/require.js');
+      assert.equal(response.status, 200);
+      assert.include(response.text, 'requirejs');
+    });
   });
 });
