@@ -180,10 +180,8 @@ function compileHtml(
       try {
         compiled = babelCore.transform(js, {plugins}).code;
       } catch (e) {
-        // By not setting textContent we keep the original script, which might
-        // work. We may want to fail the request so a better error shows up in
-        // the network panel of dev tools. If this is the main page we could
-        // also render a message in the browser.
+        // Leave the original script as-is. Maybe it will work...
+        // TODO Show an error in the browser console, or on the runner page.
         console.warn(`Error compiling script in ${location}: ${e.message}`);
         continue;
       }
