@@ -1,0 +1,50 @@
+<!DOCTYPE html><html><head>
+  
+<script>
+  (function() {
+    window.WCT = window.WCT || {};
+    var originalWaitFor = window.WCT.waitFor;
+    window.WCT.waitFor = function(cb) {
+      window._wctCallback = function() {
+        if (originalWaitFor) {
+          originalWaitFor(cb);
+        } else {
+          cb();
+        }
+      };
+    };
+  }());
+</script>
+<script src="../../web-component-tester/browser.js"></script>
+</head>
+
+<body>
+  <script src="/components/requirejs/require.js"></script>
+<script>
+  (function() {
+    var originalRequire = window.require;
+    var moduleCount = 0;
+    window.require = function(deps, factory) {
+      moduleCount++;
+      originalRequire(deps, function(...args) {
+        if (factory) {
+          factory(...args);
+        }
+        moduleCount--;
+        if (moduleCount === 0) {
+          window._wctCallback();
+        }
+      });
+    };
+  })();
+</script>
+
+<script>require(['lib.js'], function (_lib) {
+    'use strict';
+});</script>
+
+  <script>require(["external.js"]);</script>
+
+
+
+</body></html>

@@ -25,7 +25,7 @@ chai.use(chaiAsPromised);
 const assert = chai.assert;
 const root = path.join(__dirname, '..', '..', 'test');
 
-const userAgentsThatDontSupportES2015 = [
+const userAgentsThatDontSupportES2015OrModules = [
   'unknown browser',
   'Mozilla/5.0 (iPhone; CPU iPhone OS 9_1 like Mac OS X) AppleWebKit/601.1.46 (KHTML, like Gecko) Version/9.0 Mobile/13B143 Safari/601.1',
   'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/52.0.2743.116 Safari/537.36 Edge/14.99999',
@@ -37,20 +37,19 @@ const userAgentsThatSupportES2015AndModules = [
   'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_12_6) AppleWebKit/603.3.8 (KHTML, like Gecko) Version/10.1.2 Safari/603.3.8',
 ];
 
+function readTestFile(p: string) {
+  return fs.readFileSync(path.join(root, p)).toString();
+};
+
 suite('compile-middleware', () => {
 
+  let app: Express.Application;
+
   suite('babelCompileCache', () => {
-
-    let app: Express.Application;
-
     const uncompiledHtml =
-        fs.readFileSync(
-              path.join(root, 'bower_components/test-component/test.html'))
-            .toString();
+        readTestFile('bower_components/test-component/test.html');
     const uncompiledJs =
-        fs.readFileSync(
-              path.join(root, 'bower_components/test-component/test.js'))
-            .toString();
+        readTestFile('bower_components/test-component/test.js');
 
     beforeEach(() => {
       app = getApp({
@@ -153,7 +152,7 @@ suite('compile-middleware', () => {
 
       test('detect user-agents that need compilation', async () => {
         assert.isFalse(babelCompileCache.has(`Unexpected .js file in cache`));
-        for (const userAgent of userAgentsThatDontSupportES2015) {
+        for (const userAgent of userAgentsThatDontSupportES2015OrModules) {
           const response = await supertest(app)
                                .get('/components/test-component/test.js')
                                .set('User-Agent', userAgent);
@@ -171,7 +170,7 @@ suite('compile-middleware', () => {
   });
 
   test('browserNeedsCompilation', () => {
-    for (const userAgent of userAgentsThatDontSupportES2015) {
+    for (const userAgent of userAgentsThatDontSupportES2015OrModules) {
       assert.equal(browserNeedsCompilation(userAgent), true, userAgent);
     }
     for (const userAgent of userAgentsThatSupportES2015AndModules) {
@@ -191,5 +190,45 @@ suite('compile-middleware', () => {
         isPolyfill.test('/webcomponentsjs/tests/imports/current-script.js'));
     assert.isFalse(
         isPolyfill.test('/notwebcomponentsjs/webcomponents-lite.js'));
+  });
+
+  suite('module transformations', () => {
+    // Chrome 60 supports ES2015 but not modules.
+    const userAgent =
+        'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_12_6) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/60.0.3163.39 Safari/537.36';
+
+    beforeEach(() => {
+      app = getApp({
+        root: root,
+        compile: 'auto',
+        componentDir: path.join(root, 'bower_components'),
+      });
+      babelCompileCache.reset();
+    });
+
+    async function assertGolden(filename: string) {
+      const golden = readTestFile(
+          path.join('bower_components', 'test-modules', 'golden', filename));
+      const response = await supertest(app)
+                           .get('/components/test-modules/' + filename)
+                           .set('User-Agent', userAgent);
+      assert.equal(response.text.trim(), golden.trim());
+    }
+
+    test('transforms HTML with WCT', async () => {
+      await assertGolden('test-suite-wct.html');
+    });
+
+    test('transforms HTML without WCT', async () => {
+      await assertGolden('test-suite-no-wct.html');
+    });
+
+    test('transforms module-looking JS', async () => {
+      await assertGolden('lib-module.js');
+    });
+
+    test('transforms non-module-looking JS', async () => {
+      await assertGolden('lib-no-module.js');
+    });
   });
 });
