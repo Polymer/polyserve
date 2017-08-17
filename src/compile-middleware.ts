@@ -184,7 +184,7 @@ function compileHtml(
       try {
         compiled = babelCore.transform(js, {plugins}).code;
       } catch (e) {
-        // Leave the original script as-is. Maybe it will work...
+        // Continue so that we leave the original script as-is. It might work?
         // TODO Show an error in the browser console, or on the runner page.
         console.warn(`Error compiling script in ${location}: ${e.message}`);
         continue;
