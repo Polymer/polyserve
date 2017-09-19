@@ -29,12 +29,12 @@ const userAgentsThatDontSupportES2015OrModules = [
   'unknown browser',
   'Mozilla/5.0 (iPhone; CPU iPhone OS 9_1 like Mac OS X) AppleWebKit/601.1.46 (KHTML, like Gecko) Version/9.0 Mobile/13B143 Safari/601.1',
   'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/52.0.2743.116 Safari/537.36 Edge/14.99999',
-  'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/52.0.2743.116 Safari/537.36 Edge/15.14986'
+  'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/52.0.2743.116 Safari/537.36 Edge/15.14986',
 ];
 
 const userAgentsThatSupportES2015AndModules = [
   'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_12_6) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/61.0.3163.39 Safari/537.36',
-  'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_12_6) AppleWebKit/603.3.8 (KHTML, like Gecko) Version/10.1.2 Safari/603.3.8'
+  'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_12_6) AppleWebKit/603.3.8 (KHTML, like Gecko) Version/10.1.2 Safari/603.3.8',
 ];
 
 function readTestFile(p: string) {
@@ -56,7 +56,7 @@ suite('compile-middleware', () => {
       app = getApp({
         root: root,
         compile: 'always',
-        componentDir: path.join(root, 'bower_components')
+        componentDir: path.join(root, 'bower_components'),
       });
       // Ensure a fresh cache for each test.
       babelCompileCache.reset();
@@ -135,7 +135,7 @@ suite('compile-middleware', () => {
         app = getApp({
           root: root,
           compile: 'auto',
-          componentDir: path.join(root, 'bower_components')
+          componentDir: path.join(root, 'bower_components'),
         });
         // Ensure a fresh cache for each test.
         babelCompileCache.reset();
@@ -200,7 +200,7 @@ suite('compile-middleware', () => {
       app = getApp({
         root: root,
         compile: 'auto',
-        componentDir: path.join(root, 'bower_components')
+        componentDir: path.join(root, 'bower_components'),
       });
       babelCompileCache.reset();
     });

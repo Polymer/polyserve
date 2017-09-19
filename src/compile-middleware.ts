@@ -52,17 +52,17 @@ const es2015Plugins = [
   'babel-plugin-transform-es2015-template-literals',
   'babel-plugin-transform-es2015-typeof-symbol',
   'babel-plugin-transform-es2015-unicode-regex',
-  'babel-plugin-transform-regenerator'
-].map(name => require(name));
+  'babel-plugin-transform-regenerator',
+].map((name) => require(name));
 
 const modulesPlugins =
-    ['babel-plugin-transform-es2015-modules-amd'].map(name => require(name));
+    ['babel-plugin-transform-es2015-modules-amd'].map((name) => require(name));
 
 const javaScriptMimeTypes = [
   'application/javascript',
   'application/ecmascript',
   'text/javascript',
-  'text/ecmascript'
+  'text/ecmascript',
 ];
 
 const htmlMimeType = 'text/html';
@@ -112,7 +112,7 @@ export function babelCompile(
       const capabilities = browserCapabilities(request.get('user-agent'));
       const options = {
         transformES2015: forceCompile || !capabilities.has('es2015'),
-        transformModules: forceCompile || !capabilities.has('modules')
+        transformModules: forceCompile || !capabilities.has('modules'),
       };
       const optionsLeader = JSON.stringify(options);
       const cached = babelCompileCache.get(optionsLeader + body);
@@ -131,7 +131,7 @@ export function babelCompile(
       }
       babelCompileCache.set(optionsLeader + body, transformed);
       return transformed;
-    }
+    },
   });
 }
 
