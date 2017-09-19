@@ -175,6 +175,7 @@ function compileHtml(
       dom5.replace(
           scriptTag,
           parse5.parseFragment(`<script>require(["${src}"]);</script>\n`));
+
     } else if (isInline) {
       let js = dom5.getTextContent(scriptTag);
       const plugins = [];

@@ -42,6 +42,7 @@ function readTestFile(p: string) {
 }
 
 suite('compile-middleware', () => {
+
   let app: Express.Application;
 
   suite('babelCompileCache', () => {
@@ -131,6 +132,7 @@ suite('compile-middleware', () => {
     });
 
     suite('with compile option set to \'auto\'', () => {
+
       beforeEach(() => {
         app = getApp({
           root: root,
