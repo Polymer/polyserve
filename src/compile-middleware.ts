@@ -14,26 +14,24 @@
 
 import * as babelCore from 'babel-core';
 import * as babylon from 'babylon';
-import { browserCapabilities } from 'browser-capabilities';
-import { parse as parseContentType } from 'content-type';
+import {browserCapabilities} from 'browser-capabilities';
+import {parse as parseContentType} from 'content-type';
 import * as dom5 from 'dom5';
-import { Request, RequestHandler, Response } from 'express';
+import {Request, RequestHandler, Response} from 'express';
 import * as LRU from 'lru-cache';
 import * as parse5 from 'parse5';
 
-import { transformResponse } from './transform-middleware';
+import {transformResponse} from './transform-middleware';
 
 const p = dom5.predicates;
 
 const isJsScriptNode = p.AND(
-  p.hasTagName('script'),
-  p.OR(
-    p.NOT(p.hasAttr('type')),
-    p.hasAttrValue('type', 'text/javascript'),
-    p.hasAttrValue('type', 'application/javascript'),
-    p.hasAttrValue('type', 'module')
-  )
-);
+    p.hasTagName('script'),
+    p.OR(
+        p.NOT(p.hasAttr('type')),
+        p.hasAttrValue('type', 'text/javascript'),
+        p.hasAttrValue('type', 'application/javascript'),
+        p.hasAttrValue('type', 'module')));
 
 const es2015Plugins = [
   'babel-plugin-transform-es2015-arrow-functions',
@@ -57,9 +55,8 @@ const es2015Plugins = [
   'babel-plugin-transform-regenerator'
 ].map(name => require(name));
 
-const modulesPlugins = ['babel-plugin-transform-es2015-modules-amd'].map(name =>
-  require(name)
-);
+const modulesPlugins =
+    ['babel-plugin-transform-es2015-modules-amd'].map(name => require(name));
 
 const javaScriptMimeTypes = [
   'application/javascript',
@@ -93,9 +90,7 @@ export const babelCompileCache = LRU<string>(<LRU.Options<string>>{
 });
 
 export function babelCompile(
-  forceCompile: boolean,
-  componentUrl: string
-): RequestHandler {
+    forceCompile: boolean, componentUrl: string): RequestHandler {
   return transformResponse({
     shouldTransform(request: Request, response: Response) {
       // We must never compile the Custom Elements ES5 Adapter or other
@@ -141,19 +136,17 @@ export function babelCompile(
 }
 
 function compileHtml(
-  source: string,
-  location: string,
-  componentUrl: string,
-  options: CompileOptions
-): string {
+    source: string,
+    location: string,
+    componentUrl: string,
+    options: CompileOptions): string {
   const document = parse5.parse(source);
   let requireScriptTag, wctScriptTag;
 
   for (const scriptTag of dom5.queryAll(document, isJsScriptNode)) {
     // Is this a module script we should transform?
-    const transformingModule =
-      options.transformModules &&
-      dom5.getAttribute(scriptTag, 'type') === 'module';
+    const transformingModule = options.transformModules &&
+        dom5.getAttribute(scriptTag, 'type') === 'module';
 
     if (transformingModule && !requireScriptTag) {
       // We need RequireJS to load the AMD modules we are declaring. Inject the
@@ -162,8 +155,7 @@ function compileHtml(
       // typically loaded in <head>, behave differently when window.require is
       // present.
       const fragment = parse5.parseFragment(
-        `<script src="/${componentUrl}/requirejs/require.js"></script>\n`
-      );
+          `<script src="/${componentUrl}/requirejs/require.js"></script>\n`);
       requireScriptTag = fragment.childNodes[0];
       dom5.insertBefore(scriptTag.parentNode, scriptTag, fragment);
     }
@@ -171,11 +163,9 @@ function compileHtml(
     const src = dom5.getAttribute(scriptTag, 'src');
     const isInline = !src;
 
-    if (
-      src &&
-      (src.includes('web-component-tester/browser.js') ||
-        src.includes('wct-browser-legacy/browser.js'))
-    ) {
+    if (src &&
+        (src.includes('web-component-tester/browser.js') ||
+         src.includes('wct-browser-legacy/browser.js'))) {
       wctScriptTag = scriptTag;
     }
 
@@ -183,9 +173,8 @@ function compileHtml(
       // Transform an external module script into a `require` for that module,
       // to be executed immediately.
       dom5.replace(
-        scriptTag,
-        parse5.parseFragment(`<script>require(["${src}"]);</script>\n`)
-      );
+          scriptTag,
+          parse5.parseFragment(`<script>require(["${src}"]);</script>\n`));
     } else if (isInline) {
       let js = dom5.getTextContent(scriptTag);
       const plugins = [];
@@ -198,7 +187,7 @@ function compileHtml(
 
       let compiled;
       try {
-        compiled = babelCore.transform(js, { plugins }).code;
+        compiled = babelCore.transform(js, {plugins}).code;
       } catch (e) {
         // Continue so that we leave the original script as-is. It might work?
         // TODO Show an error in the browser console, or on the runner page.
@@ -237,9 +226,7 @@ function compileHtml(
     // users may be setting their own `waitFor` that musn't clobber ours.
     // Likewise we must call theirs if we find it.
     dom5.insertBefore(
-      wctScriptTag.parentNode,
-      wctScriptTag,
-      parse5.parseFragment(`
+        wctScriptTag.parentNode, wctScriptTag, parse5.parseFragment(`
 <script>
   // Injected by Polyserve.
   (function() {
@@ -256,8 +243,7 @@ function compileHtml(
     };
   }());
 </script>
-`)
-    );
+`));
 
     // Monkey patch `require` to keep track of loaded AMD modules. Note this
     // assumes that all modules are registered before `DOMContentLoaded`, but
@@ -268,9 +254,7 @@ function compileHtml(
     // couldn't be resolved, or the factory threw an exception) and show a nice
     // message. For now test running will just hang if any module fails.
     dom5.insertAfter(
-      requireScriptTag.parentNode,
-      requireScriptTag,
-      parse5.parseFragment(`
+        requireScriptTag.parentNode, requireScriptTag, parse5.parseFragment(`
 <script>
   // Injected by Polyserve.
   (function() {
@@ -290,8 +274,7 @@ function compileHtml(
     };
   })();
 </script>
-`)
-    );
+`));
   }
 
   return parse5.serialize(document);
@@ -305,13 +288,13 @@ function compileScript(source: string, options: CompileOptions): string {
   if (options.transformModules && hasImportOrExport(source)) {
     plugins.push(...modulesPlugins);
   }
-  return babelCore.transform(source, { plugins }).code;
+  return babelCore.transform(source, {plugins}).code;
 }
 
 function hasImportOrExport(js: string): boolean {
   let ast;
   try {
-    ast = babylon.parse(js, { sourceType: 'module' });
+    ast = babylon.parse(js, {sourceType: 'module'});
   } catch (e) {
     return false;
   }
