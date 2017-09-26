@@ -145,6 +145,9 @@ function compileHtml(
 
   const jsNodes = dom5.queryAll(document, isJsScriptNode);
 
+  // Assume that if this document has a nomodule script, the author is already
+  // handling browsers that don't support modules, and we don't need to
+  // transform anything.
   if (jsNodes.find((node) => dom5.hasAttribute(node, 'nomodule'))) {
     return source;
   }
