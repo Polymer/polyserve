@@ -102,6 +102,9 @@ export interface ServerOptions {
   additionalRoutes?: Map<string, express.RequestHandler>;
 }
 
+export type ExpressServerRemap =
+    (app: express.Express, options: ServerOptions) => Promise<express.Express>;
+
 function applyDefaultServerOptions(options: ServerOptions) {
   const withDefaults: ServerOptions = Object.assign({}, options);
   Object.assign(withDefaults, {
@@ -123,16 +126,22 @@ function applyDefaultServerOptions(options: ServerOptions) {
  * @deprecated Please use `startServers` instead. This function will be removed
  *     in a future release.
  */
-export async function startServer(options: ServerOptions):
-    Promise<http.Server> {
-  return (await _startServer(options)).server;
+export async function startServer(
+    options: ServerOptions, remap?: ExpressServerRemap): Promise<http.Server> {
+  return (await _startServer(options, remap)).server;
 }
 
-async function _startServer(options: ServerOptions) {
+async function _startServer(
+    options: ServerOptions, remap?: ExpressServerRemap) {
   options = options || {};
   assertNodeVersion(options);
   try {
-    const app = getApp(options);
+    let app = getApp(options);
+    if (remap) {
+      // If the map function doesn't return an app, we should fallback to the
+      // original app, hence the `remap(app) || app`.
+      app = await remap(app, options) || app;
+    }
     const server = await startWithApp(options, app);
     return {app, server};
   } catch (e) {
@@ -189,17 +198,18 @@ export type StartServerResult = MainlineServer | MultipleServersInfo;
  * Starts one or more web servers, based on the given options and
  * variant bower_components directories that are found in the root dir.
  */
-export async function startServers(options: ServerOptions):
-    Promise<StartServerResult> {
+export async function startServers(
+    options: ServerOptions,
+    remap?: ExpressServerRemap): Promise<StartServerResult> {
   options = applyDefaultServerOptions(options);
   const variants = await findVariants(options);
   // TODO(rictic): support manually configuring variants? tracking more
   //   metadata about them besides their names?
   if (variants.length > 0) {
-    return await startVariants(options, variants);
+    return await startVariants(options, variants, remap);
   }
 
-  const serverAndApp = await _startServer(options);
+  const serverAndApp = await _startServer(options, remap);
   return {
     options,
     kind: 'mainline',
@@ -223,10 +233,12 @@ async function findVariants(options: ServerOptions) {
 }
 
 async function startVariants(
-    options: ServerOptions, variants: {name: string, directory: string}[]) {
+    options: ServerOptions,
+    variants: {name: string, directory: string}[],
+    remap?: ExpressServerRemap) {
   const mainlineOptions = Object.assign({}, options);
   mainlineOptions.port = 0;
-  const mainServer = await _startServer(mainlineOptions);
+  const mainServer = await _startServer(mainlineOptions, remap);
   const mainServerInfo: MainlineServer = {
     kind: 'mainline',
     server: mainServer.server,
@@ -239,7 +251,7 @@ async function startVariants(
     const variantOpts = Object.assign({}, options);
     variantOpts.port = 0;
     variantOpts.componentDir = variant.directory;
-    const variantServer = await _startServer(variantOpts);
+    const variantServer = await _startServer(variantOpts, remap);
     variantServerInfos.push({
       kind: 'variant',
       variantName: variant.name,
