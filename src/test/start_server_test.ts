@@ -519,7 +519,7 @@ suite('startServer', () => {
 });
 
 suite('startServers', () => {
-  suite('remap', () => {
+  suite('replace generated app with optional appMapper argument', () => {
 
     let prevCwd: string;
     setup(() => {
