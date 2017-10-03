@@ -20,6 +20,7 @@ import * as dom5 from 'dom5';
 import {Request, RequestHandler, Response} from 'express';
 import * as LRU from 'lru-cache';
 import * as parse5 from 'parse5';
+import * as url from 'url';
 
 import {transformResponse} from './transform-middleware';
 
@@ -181,9 +182,11 @@ function compileHtml(
     if (transformingModule && !isInline) {
       // Transform an external module script into a `require` for that module,
       // to be executed immediately.
+      const resolvedSrc = url.resolve(location, src);
       dom5.replace(
           scriptTag,
-          parse5.parseFragment(`<script>require(["${src}"]);</script>\n`));
+          parse5.parseFragment(
+              `<script>require(["${resolvedSrc}"]);</script>\n`));
 
     } else if (isInline) {
       let js = dom5.getTextContent(scriptTag);
