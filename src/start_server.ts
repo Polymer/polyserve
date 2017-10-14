@@ -35,6 +35,11 @@ import compression = require('compression');
 
 const httpProxy = require('http-proxy-middleware');
 
+if(process.version[1]=="0"){
+  console.log("You are using an old version of Node. Please, update");
+  process.exit(1);
+}
+
 export interface ServerOptions {
   /** The root directory to serve **/
   root?: string;
