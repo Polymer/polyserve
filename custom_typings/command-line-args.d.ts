@@ -1,7 +1,4 @@
 declare module 'command-line-args' {
-  function commandLineArgs(args: commandLineArgs.ArgDescriptor[])
-      : commandLineArgs.CLI;
-
   module commandLineArgs {
     interface ArgDescriptor {
       name: string;
@@ -11,17 +8,18 @@ declare module 'command-line-args' {
       type?: Object;
       multiple?: boolean;
       defaultOption?: boolean;
-    }
-    interface UsageOpts {
-      title?: string;
-      header?: string;
-      description?: string;
-    }
-    interface CLI {
-      parse(): any;
-      getUsage(opts: UsageOpts): string;
+      group?: string;
     }
   }
+
+  /**
+   * @param descriptors An array of objects that describe the arguments that
+   *     we want to parse.
+   * @param args Optional arguments to parse. If not given, process.argv is
+   *     used.
+   */
+  function commandLineArgs(
+      descriptors: commandLineArgs.ArgDescriptor[], args?: string[]): any;
 
   export = commandLineArgs;
 }

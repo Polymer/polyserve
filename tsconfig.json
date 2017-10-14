@@ -1,44 +1,27 @@
 {
-    "compilerOptions": {
-        "target": "es6",
-        "module": "commonjs",
-        "moduleResolution": "node",
-        "isolatedModules": false,
-        "experimentalDecorators": true,
-        "emitDecoratorMetadata": true,
-        "declaration": true,
-        "noImplicitAny": true,
-        "removeComments": false,
-        "noLib": true,
-        "preserveConstEnums": true,
-        "suppressImplicitAnyIndexErrors": true,
-        "outDir": "lib"
-    },
-    "filesGlob": [
-        "src/**/*.ts",
-        "!node_modules/**",
-        "custom_typings/*.d.ts",
-        "typings/main/*.d.ts",
-        "typings/main.d.ts",
-        "node_modules/typescript/lib/lib.core.es6.d.ts"
+  "compilerOptions": {
+    "target": "es6",
+    "lib": [
+      "es2016",
+      "esnext.asynciterable"
     ],
-    "compileOnSave": true,
-    "buildOnSave": false,
-    "files": [
-        "src/args.ts",
-        "src/bower_config.ts",
-        "src/cli.ts",
-        "src/make_app.ts",
-        "src/polyserve.ts",
-        "src/start_server.ts",
-        "custom_typings/command-line-args.d.ts",
-        "custom_typings/find-port.d.ts",
-        "custom_typings/node.d.ts",
-        "custom_typings/send.d.ts",
-        "typings/main.d.ts",
-        "node_modules/typescript/lib/lib.core.es6.d.ts"
-    ],
-    "atom": {
-        "rewriteTsconfig": true
-    }
+    "module": "commonjs",
+    "moduleResolution": "node",
+    "isolatedModules": false,
+    "experimentalDecorators": true,
+    "emitDecoratorMetadata": true,
+    "declaration": true,
+    "noImplicitAny": true,
+    "removeComments": false,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "preserveConstEnums": true,
+    "suppressImplicitAnyIndexErrors": true,
+    "outDir": "lib",
+    "sourceMap": true
+  },
+  "include": [
+    "custom_typings/**/*.ts",
+    "src/**/*.ts"
+  ]
 }

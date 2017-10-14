@@ -1,30 +1,41 @@
 /**
  * @license
  * Copyright (c) 2015 The Polymer Project Authors. All rights reserved.
- * This code may only be used under the BSD style license found at http://polymer.github.io/LICENSE.txt
- * The complete set of authors may be found at http://polymer.github.io/AUTHORS.txt
- * The complete set of contributors may be found at http://polymer.github.io/CONTRIBUTORS.txt
+ * This code may only be used under the BSD style license found at
+ * http://polymer.github.io/LICENSE.txt
+ * The complete set of authors may be found at
+ * http://polymer.github.io/AUTHORS.txt
+ * The complete set of contributors may be found at
+ * http://polymer.github.io/CONTRIBUTORS.txt
  * Code distributed by Google as part of the polymer project is also
- * subject to an additional IP rights grant found at http://polymer.github.io/PATENTS.txt
+ * subject to an additional IP rights grant found at
+ * http://polymer.github.io/PATENTS.txt
  */
 
 import * as express from 'express';
-import * as fs from 'fs';
 import * as path from 'path';
-import * as send from 'send';
-import { parse as parseUrl } from 'url';
-import { bowerConfig } from './bower_config';
+import {parse as parseUrl} from 'url';
+
+import send = require('send');
 
 export interface AppOptions {
-  componentDir?: string;
-  packageName?: string;
+  componentDir: string;
+  packageName: string;
   headers?: {[name: string]: string};
   root?: string;
+  compile?: 'always'|'never'|'auto';
 }
 
 export interface PolyserveApplication extends express.Express {
   packageName: string;
 }
+
+// When we automatically transform ES modules to AMD modules (see
+// compile-middleware.ts), we inject a dependency on the RequireJS loader. We
+// include RequireJS as an NPM dependency of Polyserve so that users don't need
+// to make it a dependency of their project. This is our local path to the
+// library.
+const localRequirePath = require.resolve('requirejs/require.js');
 
 /**
  * Make a polyserve express app.
@@ -37,38 +48,79 @@ export interface PolyserveApplication extends express.Express {
  * @return {Object} An express app which can be served with `app.get`
  */
 export function makeApp(options: AppOptions): PolyserveApplication {
-  options = options || {};
-  let root = options.root;
-  let componentDir = options.componentDir || 'bower_components';
-  let packageName = options.packageName || bowerConfig(root).name
-      || path.basename(process.cwd());
-  let headers = options.headers || {};
+  const root = options.root;
+  const baseComponentDir = options.componentDir;
+  const componentDir = path.resolve(root, baseComponentDir);
+  const packageName = options.packageName;
+  const headers = options.headers || {};
 
-  let app: PolyserveApplication = <PolyserveApplication>express();
+  if (packageName == null) {
+    throw new Error('packageName not provided');
+  }
 
-  app.get('*', function (req, res) {
+  const app: PolyserveApplication = <PolyserveApplication>express();
+
+  app.get('*', (req, res) => {
     // Serve local files from . and other components from bower_components
-    let url = parseUrl(req.url, true);
+    const url = parseUrl(req.url, true);
     let splitPath = url.pathname.split('/').slice(1);
+    const splitPackagePath = packageName.split('/');
 
-    if (splitPath[0] === packageName) {
+    if (arrayStartsWith(splitPath, splitPackagePath)) {
       if (root) {
-        splitPath = [root].concat(splitPath.slice(1));
+        splitPath = [root].concat(splitPath.slice(splitPackagePath.length));
       } else {
-        splitPath = splitPath.slice(1);
+        splitPath = splitPath.slice(splitPackagePath.length);
       }
     } else {
       splitPath = [componentDir].concat(splitPath);
     }
-    let filePath = splitPath.join('/');
+    const filePath = splitPath.join('/');
 
     if (headers) {
-      for (let header in headers) {
-        (<any>res).append(header, headers[header]);
+      for (const header in headers) {
+        (<any>res).setHeader(header, headers[header]);
       }
     }
-    send(req, filePath).pipe(res);
+    const _send = send(req, filePath);
+    // Uncomment this to disable 304s from send(). This will make the
+    // compileMiddleware used in startServer always compile. Useful for testing
+    // and working on the compilation middleware.
+    // _send.isFresh = () => false;
+
+    // The custom redirect is needed becuase send() redirects to the
+    // _file_ path plus a leading slash, not the URL. :(
+    // https://github.com/pillarjs/send/issues/132
+    _send
+        .on('directory',
+            () => {
+              res.statusCode = 301;
+              res.setHeader('Location', req.originalUrl + '/');
+              res.end('Redirecting to ' + req.originalUrl + '/');
+            })
+        .on('error',
+            (err) => {
+              // A RequireJS found in the user's components directory will win
+              // over our verison.
+              if (err.statusCode === 404 &&
+                  err.path.endsWith('/requirejs/require.js')) {
+                send(req, localRequirePath).pipe(res);
+              } else {
+                res.statusCode = err.statusCode;
+                res.end(err.Error);
+              }
+            })
+        .pipe(res);
   });
   app.packageName = packageName;
   return app;
+}
+
+function arrayStartsWith(array: any[], prefix: any[]) {
+  for (let i = 0; i < prefix.length; i++) {
+    if (i >= array.length || array[i] !== prefix[i]) {
+      return false;
+    }
+  }
+  return true;
 }
