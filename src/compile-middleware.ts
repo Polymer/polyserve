@@ -23,6 +23,8 @@ import * as parse5 from 'parse5';
 
 import {transformResponse} from './transform-middleware';
 
+console.log('compile-middleware');
+
 const p = dom5.predicates;
 
 const isJsScriptNode = p.AND(
@@ -152,6 +154,8 @@ function compileHtml(
     return source;
   }
 
+  let previousGeneratedAMDModuleName: string;
+  let i = 0;
   for (const scriptTag of jsNodes) {
     // Is this a module script we should transform?
     const transformingModule = options.transformModules &&
@@ -181,10 +185,18 @@ function compileHtml(
     if (transformingModule && !isInline) {
       // Transform an external module script into a `require` for that module,
       // to be executed immediately.
+      const moduleName = `generated-module-script-${i++}`;
+      const srcs = [src];
+      if (previousGeneratedAMDModuleName) {
+        srcs.push(previousGeneratedAMDModuleName);
+      }
+      console.log('srcs', srcs);
+      const srcStrings = srcs.map((s) => `"${s}"`).join(', ');
       dom5.replace(
           scriptTag,
-          parse5.parseFragment(`<script>require(["${src}"]);</script>\n`));
-
+          parse5.parseFragment(
+              `<script>define("${moduleName}", [${srcStrings}]);</script>\n`));
+      previousGeneratedAMDModuleName = moduleName;
     } else if (isInline) {
       let js = dom5.getTextContent(scriptTag);
       const plugins = [];
@@ -197,6 +209,9 @@ function compileHtml(
 
       let compiled;
       try {
+        if (previousGeneratedAMDModuleName) {
+          js = `import '${previousGeneratedAMDModuleName}';\n` + js;
+        }
         compiled = babelCore.transform(js, {plugins}).code;
       } catch (e) {
         // Continue so that we leave the original script as-is. It might work?
