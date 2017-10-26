@@ -12,11 +12,11 @@
  * http://polymer.github.io/PATENTS.txt
  */
 
-import { assert } from 'chai';
+import {assert} from 'chai';
 import * as path from 'path';
 import * as supertest from 'supertest';
 
-import { makeApp } from '../make_app';
+import {makeApp} from '../make_app';
 
 const root = path.join(__dirname, '..', '..', 'test');
 const componentDir = path.join(root, 'components');
@@ -25,23 +25,23 @@ const packageName = 'polyserve-test';
 suite('makeApp', () => {
 
   test('returns an app', () => {
-    let app = makeApp({ root, componentDir, packageName });
+    let app = makeApp({root, componentDir, packageName});
     assert.isOk(app);
     assert.equal(app.packageName, 'polyserve-test');
   });
 
   test('serves package files', async () => {
-    let app = makeApp({ root, componentDir, packageName });
+    let app = makeApp({root, componentDir, packageName});
     await supertest(app)
-      .get('/polyserve-test/test-file.txt')
-      .expect(200, 'PASS\n');
+        .get('/polyserve-test/test-file.txt')
+        .expect(200, 'PASS\n');
   });
 
   test('supports relative roots', async () => {
-    let app = makeApp({ root: './test', componentDir, packageName });
+    let app = makeApp({root: './test', componentDir, packageName});
     await supertest(app)
-      .get('/polyserve-test/test-file.txt')
-      .expect(200, 'PASS\n');
+        .get('/polyserve-test/test-file.txt')
+        .expect(200, 'PASS\n');
   });
 
   test('serves component files', async () => {
@@ -51,8 +51,8 @@ suite('makeApp', () => {
       packageName,
     });
     await supertest(app)
-      .get('/test-component/test-file.txt')
-      .expect(200, 'TEST COMPONENT\n');
+        .get('/test-component/test-file.txt')
+        .expect(200, 'TEST COMPONENT\n');
   });
 
   test('serves component indices', async () => {
@@ -71,9 +71,9 @@ suite('makeApp', () => {
       packageName,
     });
     await supertest(app)
-      .get('/test-component')
-      .expect(301)
-      .expect('Location', '/test-component/');
+        .get('/test-component')
+        .expect(301)
+        .expect('Location', '/test-component/');
   });
 
   test('serves scoped package files', async () => {
@@ -83,8 +83,8 @@ suite('makeApp', () => {
       packageName: '@polymer/polyserve-test',
     });
     await supertest(app)
-      .get('/@polymer/polyserve-test/test-file.txt')
-      .expect(200, 'PASS\n');
+        .get('/@polymer/polyserve-test/test-file.txt')
+        .expect(200, 'PASS\n');
   });
 
   test('serves scoped component files', async () => {
@@ -94,8 +94,8 @@ suite('makeApp', () => {
       packageName: '@polymer/polyserve-test',
     });
     await supertest(app)
-      .get('/@polymer/test-component/test-file.txt')
-      .expect(200, 'TEST COMPONENT\n');
+        .get('/@polymer/test-component/test-file.txt')
+        .expect(200, 'TEST COMPONENT\n');
   });
 
 });
