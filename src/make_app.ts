@@ -14,16 +14,16 @@
 
 import * as express from 'express';
 import * as path from 'path';
-import {parse as parseUrl} from 'url';
+import { parse as parseUrl } from 'url';
 
 import send = require('send');
 
 export interface AppOptions {
   componentDir: string;
   packageName: string;
-  headers?: {[name: string]: string};
+  headers?: { [name: string]: string };
   root?: string;
-  compile?: 'always'|'never'|'auto';
+  compile?: 'always' | 'never' | 'auto';
 }
 
 export interface PolyserveApplication extends express.Express {
@@ -48,7 +48,7 @@ const localRequirePath = require.resolve('requirejs/require.js');
  * @return {Object} An express app which can be served with `app.get`
  */
 export function makeApp(options: AppOptions): PolyserveApplication {
-  const root = options.root;
+  const root = path.resolve(options.root);
   const baseComponentDir = options.componentDir;
   const componentDir = path.resolve(root, baseComponentDir);
   const packageName = options.packageName;
@@ -92,25 +92,25 @@ export function makeApp(options: AppOptions): PolyserveApplication {
     // _file_ path plus a leading slash, not the URL. :(
     // https://github.com/pillarjs/send/issues/132
     _send
-        .on('directory',
-            () => {
-              res.statusCode = 301;
-              res.setHeader('Location', req.originalUrl + '/');
-              res.end('Redirecting to ' + req.originalUrl + '/');
-            })
-        .on('error',
-            (err) => {
-              // A RequireJS found in the user's components directory will win
-              // over our verison.
-              if (err.statusCode === 404 &&
-                  err.path.endsWith('/requirejs/require.js')) {
-                send(req, localRequirePath).pipe(res);
-              } else {
-                res.statusCode = err.statusCode;
-                res.end(err.Error);
-              }
-            })
-        .pipe(res);
+      .on('directory',
+      () => {
+        res.statusCode = 301;
+        res.setHeader('Location', req.originalUrl + '/');
+        res.end('Redirecting to ' + req.originalUrl + '/');
+      })
+      .on('error',
+      (err) => {
+        // A RequireJS found in the user's components directory will win
+        // over our verison.
+        if (err.statusCode === 404 &&
+          err.path.endsWith('/requirejs/require.js')) {
+          send(req, localRequirePath).pipe(res);
+        } else {
+          res.statusCode = err.statusCode;
+          res.end(err.Error);
+        }
+      })
+      .pipe(res);
   });
   app.packageName = packageName;
   return app;
