@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 * Honor `.bowerrc` for bower component directory and variants
 * Root directories can now be relative paths
+* Support dynamic import, object rest spread and async generator syntax when compiling.
 
 ## [0.23.0](https://github.com/PolymerLabs/polyserve/tree/0.23.0) (2017-10-02)
 

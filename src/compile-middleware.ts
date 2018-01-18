@@ -304,7 +304,10 @@ function compileScript(source: string, options: CompileOptions): string {
 function hasImportOrExport(js: string): boolean {
   let ast;
   try {
-    ast = babylon.parse(js, {sourceType: 'module'});
+    ast = babylon.parse(js, {
+      sourceType: 'module',
+      plugins: ['asyncGenerators', 'dynamicImport', 'objectRestSpread'],
+    });
   } catch (e) {
     return false;
   }
