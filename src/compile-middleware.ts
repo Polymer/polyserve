@@ -78,10 +78,13 @@ export function babelCompile(
     rootDir: string,
     packageName: string,
     componentUrl: string,
-    componentDir: string): RequestHandler {
+    _componentDir: string): RequestHandler {
+      const componentDir = path.resolve(rootDir, _componentDir);
+
   return transformResponse({
 
     shouldTransform(request: Request, response: Response) {
+      console.log('F');
       // We must never compile the Custom Elements ES5 Adapter or other
       // polyfills/shims.
       if (isPolyfill.test(request.url)) {
@@ -107,12 +110,12 @@ export function babelCompile(
         transformModules: compile === 'always' || !capabilities.has('modules'),
       };
 
-      const cacheKey =
-          getCompileCacheKey(request.baseUrl + request.path, body, options);
-      const cached = babelCompileCache.get(cacheKey);
-      if (cached !== undefined) {
-        return cached;
-      }
+      // const cacheKey =
+      //     getCompileCacheKey(request.baseUrl + request.path, body, options);
+      // const cached = babelCompileCache.get(cacheKey);
+      // if (cached !== undefined) {
+      //   return cached;
+      // }
 
       let transformed;
       const contentType = getContentType(response);
@@ -121,6 +124,10 @@ export function babelCompile(
       const isRootPathRequest = request.path.startsWith(`/${packageName}`);
       const isComponentRequest = request.baseUrl === `/${componentUrl}`;
 
+      console.log(
+        request.path,
+        isRootPathRequest,
+        isComponentRequest);
       let filePath: string;
 
       if (isRootPathRequest) {
@@ -145,6 +152,7 @@ export function babelCompile(
       }
 
       if (contentType === htmlMimeType) {
+        console.log('C');
         transformed = compileHtml(
             body,
             filePath,
@@ -153,6 +161,7 @@ export function babelCompile(
             moduleResolution,
             options);
       } else if (javaScriptMimeTypes.includes(contentType)) {
+        console.log('B');
         transformed = jsTransform(body, {
           compileToEs5: options.transformES2015,
           transformEsModulesToAmd:
@@ -164,9 +173,11 @@ export function babelCompile(
           rootDir,
         });
       } else {
+        console.log('D');
         transformed = body;
       }
-      babelCompileCache.set(cacheKey, transformed);
+      console.log('E');
+      // babelCompileCache.set(cacheKey, transformed);
       return transformed;
     },
   });
@@ -178,7 +189,7 @@ function compileHtml(
     isComponentRequest: boolean,
     componentUrl: string,
     moduleResolution: 'none'|'node',
-    options: CompileOptions): string {
+    options: CompileOptions): string {;
   const document = parse5.parse(source);
   let requireScriptTag, wctScriptTag;
 
@@ -229,6 +240,7 @@ function compileHtml(
       let js = dom5.getTextContent(scriptTag);
       let compiled;
       try {
+        console.log('A');
         compiled = jsTransform(js, {
           compileToEs5: options.transformES2015,
           transformEsModulesToAmd: transformingModule,

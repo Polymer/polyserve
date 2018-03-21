@@ -259,7 +259,7 @@ suite('compile-middleware', () => {
     setup(() => {
       app = getApp({
         root: path.join(root, 'npm-package'),
-        compile: 'never',
+        compile: 'auto',
         moduleResolution: 'node',
         componentDir: path.join(root, 'npm-package/node_modules'),
         packageName: 'an-npm-package',
@@ -274,7 +274,7 @@ suite('compile-middleware', () => {
       assert.equal(response.text.trim(), golden.trim());
     }
 
-    suite('root package', () => {
+    suite.only('root package', () => {
 
       test(
           'root package bare specifiers in scoped component requests',
@@ -286,6 +286,10 @@ suite('compile-middleware', () => {
 
       test('root package bare specifiers in app requests', async () => {
         await assertGolden('/app.js', 'golden/npm-package/app.js');
+      });
+
+      test('root package bare specifiers in app requests', async () => {
+        await assertGolden('/components/index.html', 'golden/npm-package/index.html');
       });
 
     });
