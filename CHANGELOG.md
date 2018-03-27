@@ -7,7 +7,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 <!-- ## Unreleased -->
 
-## [0.26.0](https://github.com/PolymerLabs/polyserve/tree/0.26.0) (2018-03-26)
+## [0.25.3](https://github.com/PolymerLabs/polyserve/tree/0.25.3) (2018-03-26)
+
 * Node module specifier rewriter will now resolve paths according to the node
   module resolution algorithm, not just bare specifiers (e.g. "./foo" resolves
   to "./foo.js").
