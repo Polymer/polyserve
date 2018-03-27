@@ -82,6 +82,7 @@ export function transformResponse(transformer: ResponseTransformer):
         // Assumes single-byte code points!
         // res.setHeader('Content-Length', `${newBody.length}`);
         res.removeHeader('Content-Length');
+        // TODO(aomarks) Shouldn't we call the callbacks?
         return _end.call(this, newBody);
       } else {
         return _end.call(this, cbOrChunk, cbOrEncoding, cbOrFd);
