@@ -141,8 +141,7 @@ export function babelCompile(
             componentDir,
             rootDir,
             transformEsModulesToAmd: options.transformModules,
-
-            softParseError: true,
+            softSyntaxError: true,
           },
           injectAmdLoader: options.transformModules,
         });
