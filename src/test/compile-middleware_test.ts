@@ -44,8 +44,11 @@ function readTestFile(p: string) {
   return fs.readFileSync(path.join(root, p)).toString();
 }
 
-suite('compile-middleware', () => {
+function writeTestFile(p: string, contents: string) {
+  return fs.writeFileSync(path.join(root, p), contents);
+}
 
+suite('compile-middleware', () => {
   let app: Express.Application;
 
   suite('babelCompileCache', () => {
@@ -134,7 +137,6 @@ suite('compile-middleware', () => {
     });
 
     suite('with compile option set to \'auto\'', () => {
-
       setup(() => {
         app = getApp({
           root: root,
@@ -216,11 +218,14 @@ suite('compile-middleware', () => {
     });
 
     async function assertGolden(filename: string) {
-      const golden = readTestFile(
-          path.join('bower_components', 'test-modules', 'golden', filename));
       const response = await supertest(app)
                            .get('/components/test-modules/' + filename)
                            .set('User-Agent', userAgent);
+      writeTestFile(
+          path.join('bower_components', 'test-modules', 'golden', filename),
+          response.text);
+      const golden = readTestFile(
+          path.join('bower_components', 'test-modules', 'golden', filename));
       assert.equal(response.text.trim(), golden.trim());
     }
 
@@ -250,22 +255,20 @@ suite('compile-middleware', () => {
       assert.equal(response.status, 200);
       assert.include(response.text, 'requirejs');
     });
-
   });
 
   suite('module specifier rewriting', () => {
-
     const userAgent = chrome61UA;
 
     async function assertGolden(requestPath: string, goldenPath: string) {
-      const golden = readTestFile(goldenPath);
       const response =
           await supertest(app).get(requestPath).set('User-Agent', userAgent);
+      writeTestFile(goldenPath, response.text);
+      const golden = readTestFile(goldenPath);
       assert.equal(response.text.trim(), golden.trim());
     }
 
     suite('from an unscoped, root package', () => {
-
       setup(() => {
         app = getApp({
           root: path.join(root, 'npm-package'),
@@ -296,11 +299,9 @@ suite('compile-middleware', () => {
       test('bare specifiers in app HTML requests', async () => {
         await assertGolden('/index.html', 'golden/npm-package/index.html');
       });
-
     });
 
     suite('from a scoped, root package', () => {
-
       setup(() => {
         app = getApp({
           root: path.join(root, 'npm-package'),
@@ -332,12 +333,10 @@ suite('compile-middleware', () => {
         await assertGolden(
             '/index.html', 'golden/scoped-npm-package/index.html');
       });
-
     });
 
 
     suite('between component packages', () => {
-
       setup(() => {
         app = getApp({
           root: path.join(root, 'npm-package'),
@@ -381,8 +380,5 @@ suite('compile-middleware', () => {
             'golden/npm-package/node_modules/@polymer/test-component/index.html');
       });
     });
-
-
   });
-
 });
