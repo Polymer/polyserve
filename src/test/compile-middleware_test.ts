@@ -44,10 +44,6 @@ function readTestFile(p: string) {
   return fs.readFileSync(path.join(root, p)).toString();
 }
 
-function writeTestFile(p: string, contents: string) {
-  return fs.writeFileSync(path.join(root, p), contents);
-}
-
 suite('compile-middleware', () => {
   let app: Express.Application;
 
@@ -218,14 +214,11 @@ suite('compile-middleware', () => {
     });
 
     async function assertGolden(filename: string) {
+      const golden = readTestFile(
+          path.join('bower_components', 'test-modules', 'golden', filename));
       const response = await supertest(app)
                            .get('/components/test-modules/' + filename)
                            .set('User-Agent', userAgent);
-      writeTestFile(
-          path.join('bower_components', 'test-modules', 'golden', filename),
-          response.text);
-      const golden = readTestFile(
-          path.join('bower_components', 'test-modules', 'golden', filename));
       assert.equal(response.text.trim(), golden.trim());
     }
 
@@ -261,10 +254,9 @@ suite('compile-middleware', () => {
     const userAgent = chrome61UA;
 
     async function assertGolden(requestPath: string, goldenPath: string) {
+      const golden = readTestFile(goldenPath);
       const response =
           await supertest(app).get(requestPath).set('User-Agent', userAgent);
-      writeTestFile(goldenPath, response.text);
-      const golden = readTestFile(goldenPath);
       assert.equal(response.text.trim(), golden.trim());
     }
 
