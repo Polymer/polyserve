@@ -164,7 +164,7 @@ async function _startServer(
   }
 }
 
-export type ServerInfo = MainlineServer|VariantServer|ControlServer;
+export type ServerInfo = MainlineServer | VariantServer | ControlServer;
 
 export interface PolyserveServer {
   kind: 'control'|'mainline'|'variant';
@@ -206,7 +206,7 @@ export interface MultipleServersInfo {
   servers: PolyserveServer[];
 }
 
-export type StartServerResult = MainlineServer|MultipleServersInfo;
+export type StartServerResult = MainlineServer | MultipleServersInfo;
 
 /**
  * Starts one or more web servers, based on the given options and
